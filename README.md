@@ -20,36 +20,36 @@ We employed cluster system to collect live chat events across Vtubers' live stre
 
 | column          | type             | description                  |
 | --------------- | ---------------- | ---------------------------- |
-| id              | string           | anonymized chat id           |
-| channelId       | string           | anonymized author channel id |
+| timestamp       | number           | unixtime                     |
 | body            | nullable string  | chat message                 |
-| originVideoId   | string           | origin video id              |
-| originChannelId | string           | origin channel id            |
-| isSuperchat     | nullable boolean | is superchat                 |
-| isMembership    | nullable boolean | membership status            |
 | isModerator     | boolean          | is moderator                 |
 | isVerified      | boolean          | is verified                  |
 | isOwner         | boolean          | is channel owner             |
-| timestamp       | number           | unixtime                     |
+| isSuperchat     | nullable boolean | is superchat                 |
+| isMembership    | nullable boolean | membership status            |
+| originVideoId   | string           | origin video id              |
+| originChannelId | string           | origin channel id            |
+| id              | string           | anonymized chat id           |
+| channelId       | string           | anonymized author channel id |
 
 ### Ban
 
 | column          | type            | description           |
 | --------------- | --------------- | --------------------- |
+| timestamp       | nullable number | unixtime              |
 | channelId       | string          | anonymized channel id |
 | originVideoId   | string          | origin video id       |
 | originChannelId | string          | origin channel id     |
-| timestamp       | nullable number | unixtime              |
 
 ### Deletion
 
 | column          | type    | description                  |
 | --------------- | ------- | ---------------------------- |
+| timestamp       | number  | unixtime                     |
 | id              | string  | anonymized chat id           |
 | originVideoId   | string  | origin video id              |
 | originChannelId | string  | origin channel id            |
 | retracted       | boolean | is deleted by author oneself |
-| timestamp       | number  | unixtime                     |
 
 ## Consideration
 

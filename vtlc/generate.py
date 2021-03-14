@@ -35,9 +35,17 @@ def handleChat(cursor):
     chatWriter = csv.writer(chatFp)
 
     chatWriter.writerow([
-        'id', 'channelId', 'body', 'originVideoId', 'originChannelId',
-        'isSuperchat', 'isMembership', 'isModerator', 'isVerified', 'isOwner',
-        'timestamp'
+        'timestamp',
+        'body',
+        'isModerator',
+        'isVerified',
+        'isOwner',
+        'isSuperchat',
+        'isMembership',
+        'originVideoId',
+        'originChannelId',
+        'id',
+        'channelId',
     ])
 
     for doc in cursor:
@@ -63,8 +71,17 @@ def handleChat(cursor):
             isSuperchat = 1 if text == '' else None
 
         chatWriter.writerow([
-            id, channelId, text, originVideoId, originChannelId, isSuperchat,
-            isMembership, isModerator, isVerified, isOwner, timestamp
+            timestamp,
+            text,
+            isModerator,
+            isVerified,
+            isOwner,
+            isSuperchat,
+            isMembership,
+            originVideoId,
+            originChannelId,
+            id,
+            channelId,
         ])
 
     chatFp.close()
@@ -75,7 +92,12 @@ def handleBan(cursor):
     f = open(join(DATA_DIR, 'markedAsBan.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
-    columns = ['channelId', 'originVideoId', 'originChannelId', 'timestamp']
+    columns = [
+        'timestamp',
+        'channelId',
+        'originVideoId',
+        'originChannelId',
+    ]
     writer.writerow(columns)
 
     for doc in cursor:
@@ -87,7 +109,12 @@ def handleBan(cursor):
         timestamp = round(int(doc['timestampUsec']) /
                           1000) if 'timestampUsec' in doc else None
 
-        writer.writerow([channelId, originVideoId, originChannelId, timestamp])
+        writer.writerow([
+            timestamp,
+            channelId,
+            originVideoId,
+            originChannelId,
+        ])
 
     f.close()
 
@@ -98,7 +125,11 @@ def handleDeletion(cursor):
     writer = csv.writer(f)
 
     columns = [
-        'id', 'originVideoId', 'originChannelId', 'retracted', 'timestamp'
+        'timestamp',
+        'id',
+        'retracted',
+        'originVideoId',
+        'originChannelId',
     ]
     writer.writerow(columns)
 
@@ -112,8 +143,13 @@ def handleDeletion(cursor):
         timestamp = round(int(doc['timestampUsec']) /
                           1000) if 'timestampUsec' in doc else None
 
-        writer.writerow(
-            [id, originVideoId, originChannelId, retracted, timestamp])
+        writer.writerow([
+            timestamp,
+            id,
+            retracted,
+            originVideoId,
+            originChannelId,
+        ])
 
     f.close()
 
