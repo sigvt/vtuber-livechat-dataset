@@ -24,7 +24,6 @@ We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect li
 | body            | nullable string  | chat message                 |
 | isModerator     | boolean          | is moderator                 |
 | isVerified      | boolean          | is verified                  |
-| isOwner         | boolean          | is channel owner             |
 | isSuperchat     | nullable boolean | is superchat                 |
 | isMembership    | nullable boolean | membership status            |
 | originVideoId   | string           | origin video id              |
@@ -53,7 +52,7 @@ We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect li
 
 ## Consideration
 
-### Anonymization for Privacy
+### Anonymization
 
 `id` and `channelId` are anonymized by SHA-256 hashing algorithm with a pinch of undisclosed salt.
 

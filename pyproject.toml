@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "vtuber-livechat-dataset"
-version = "0.1.0"
-description = ""
+version = "1.0.0"
+description = "Large Scale Virtual YouTubers Live Chat Dataset"
 authors = ["Yasuaki Uechi <y@uechi.io>"]
 
 [tool.poetry.dependencies]

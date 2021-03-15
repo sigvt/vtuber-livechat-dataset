@@ -39,7 +39,6 @@ def handleChat(cursor):
         'body',
         'isModerator',
         'isVerified',
-        'isOwner',
         'isSuperchat',
         'isMembership',
         'originVideoId',
@@ -62,7 +61,6 @@ def handleChat(cursor):
         isMembership = 1 if 'membership' in doc else 0
         isModerator = 1 if doc['isModerator'] else 0
         isVerified = 1 if doc['isVerified'] else 0
-        isOwner = 1 if doc['isOwner'] else 0
         timestamp = round(int(doc['timestampUsec']) / 1000)
 
         # handle cases before 2021-03-14T06:23:14+09:00
@@ -75,7 +73,6 @@ def handleChat(cursor):
             text,
             isModerator,
             isVerified,
-            isOwner,
             isSuperchat,
             isMembership,
             originVideoId,
@@ -121,7 +118,7 @@ def handleBan(cursor):
 
 def handleDeletion(cursor):
     # chat
-    f = open(join(DATA_DIR, 'markAsDeleted.csv'), 'w', encoding='UTF8')
+    f = open(join(DATA_DIR, 'markedAsDeleted.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
