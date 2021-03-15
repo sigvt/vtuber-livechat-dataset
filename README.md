@@ -1,6 +1,6 @@
 # Vtuber 50M: Live Chat Dataset
 
-Massive collection of chat and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and all other NLP projects.
+Massive collection of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and all other NLP projects.
 
 Download dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
@@ -14,7 +14,7 @@ Download dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-liv
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
-We employed cluster system to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by hashing algorithm (with grain of salt).
+We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by hashing algorithm (with grain of salt).
 
 ### Chat
 
@@ -79,12 +79,19 @@ Combining the fact that we cannot write a blank chat (except for superchat) with
 - **Temporal Coverage:** from 2021-01-16
 - **Tool:** [Honeybee](https://github.com/uetchy/honeybee) cluster
 
+## Research Ideas
+
+- Toxic Chat Classification
+- Spam Detection
+- Demographic Visualization
+- Sentence Encoder
+
 ## Citation
 
 ```latex
 @misc{vtuber-livechat-dataset,
   author={Yasuaki Uechi},
-  title={Vtuber 50M: Large Scale Virtual YouTubers LiveChat Corpus for NLP},
+  title={Vtuber 50M: Large Scale Virtual YouTubers Live Chat Dataset},
   year={2021},
   month={3},
   version={1.0},
