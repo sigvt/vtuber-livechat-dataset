@@ -14,7 +14,7 @@ Download dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-liv
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
-We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by hashing algorithm (with grain of salt).
+We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by SHA-256 hashing algorithm with grain of salt.
 
 ### Chat
 
@@ -77,7 +77,7 @@ Combining the fact that we cannot write a blank chat (except for superchat) with
 
 - **Source:** YouTube Live Chat events (all live streams covered by [Holodex](https://holodex.net))
 - **Temporal Coverage:** from 2021-01-16
-- **Tool:** [Honeybee](https://github.com/uetchy/honeybee) cluster
+- **Tool:** [Honeybee](https://github.com/uetchy/honeybee)
 
 ## Research Ideas
 
