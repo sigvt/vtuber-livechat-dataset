@@ -1,9 +1,11 @@
-import pymongo
-import os
 import csv
 import hashlib
+import os
 from datetime import datetime
-from os.path import join, dirname
+from os.path import dirname, join
+
+import pandas as pd
+import pymongo
 
 ANONYMIZATION_SALT = os.environ.get('ANONYMIZATION_SALT')
 MONGODB_URI = os.environ.get('MONGODB_URI')
@@ -30,11 +32,21 @@ def convertRawMessageToString(rawMessage):
     return "".join([handler(run) for run in rawMessage])
 
 
-def handleChat(cursor):
-    chatFp = open(join(DATA_DIR, 'chat.csv'), 'w', encoding='UTF8')
-    chatWriter = csv.writer(chatFp)
+def handleChat(col):
+    print('# of chats', col.estimated_document_count())
 
-    chatWriter.writerow([
+    # pipeline = [{'$skip': 60000000}]
+    # cursor = col.aggregate(pipeline, allowDiskUse=True)
+    cursor = col.find()
+
+    chatFullFp = open(join(DATA_DIR, 'chatFull.csv'), 'w', encoding='UTF8')
+    chatFp = open(join(DATA_DIR, 'chat.csv'), 'w', encoding='UTF8')
+    superchatFp = open(join(DATA_DIR, 'superchat.csv'), 'w', encoding='UTF8')
+    chatFullWriter = csv.writer(chatFullFp)
+    chatWriter = csv.writer(chatFp)
+    superchatWriter = csv.writer(superchatFp)
+
+    chatHeader = [
         'timestamp',
         'body',
         'isModerator',
@@ -45,7 +57,31 @@ def handleChat(cursor):
         'originChannelId',
         'id',
         'channelId',
+    ]
+
+    chatFullWriter.writerow(chatHeader)
+    chatWriter.writerow(chatHeader)
+    superchatWriter.writerow([
+        'timestamp',
+        'amount',
+        'currency',
+        'color',
+        'body',
+        'originVideoId',
+        'originChannelId',
+        'id',
+        'channelId',
     ])
+
+    superchatColors = {
+        '4279592384': 'blue',
+        '4278237396': 'cyan',
+        '4278239141': 'green',
+        '4294947584': 'yellow',
+        '4293284096': 'orange',
+        '4290910299': 'violet',
+        '4291821568': 'red',
+    }
 
     for doc in cursor:
         # anonymize id and author channel id with grain of salt
@@ -63,12 +99,33 @@ def handleChat(cursor):
         isVerified = 1 if doc['isVerified'] else 0
         timestamp = round(int(doc['timestampUsec']) / 1000)
 
-        # handle cases before 2021-03-14T06:23:14+09:00
-        if timestamp < 1615670594000:
+        # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
+        isIncorrectSuperchat = timestamp < 1615850372123
+
+        # handle missing columns cases before 2021-03-13T21:23:14.000Z
+        isMembershipAndSuperchatMissing = timestamp < 1615670594000
+
+        if isSuperchat and not isIncorrectSuperchat:
+            amount = doc['purchase']['amount']
+            currency = doc['purchase']['currency']
+            bgcolor = superchatColors[doc['purchase']['headerBackgroundColor']]
+            superchatWriter.writerow([
+                timestamp,
+                amount,
+                currency,
+                bgcolor,
+                text,
+                originVideoId,
+                originChannelId,
+                id,
+                channelId,
+            ])
+
+        if isMembershipAndSuperchatMissing:
             isMembership = None
             isSuperchat = 1 if text == '' else None
 
-        chatWriter.writerow([
+        row = [
             timestamp,
             text,
             isModerator,
@@ -79,14 +136,20 @@ def handleChat(cursor):
             originChannelId,
             id,
             channelId,
-        ])
+        ]
 
-    chatFp.close()
+        if not isMembershipAndSuperchatMissing:
+            chatWriter.writerow(row)
+
+        chatFullWriter.writerow(row)
+
+    chatFullFp.close()
 
 
-def handleBan(cursor):
-    # chat
-    f = open(join(DATA_DIR, 'markedAsBan.csv'), 'w', encoding='UTF8')
+def handleBan(col):
+    print('# of ban', col.estimated_document_count())
+    cursor = col.find({'timestampUsec': {'$exists': True}})
+    f = open(join(DATA_DIR, 'markedAsBanned.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -116,8 +179,9 @@ def handleBan(cursor):
     f.close()
 
 
-def handleDeletion(cursor):
-    # chat
+def handleDeletion(col):
+    print('# of deletion', col.estimated_document_count())
+    cursor = col.find()
     f = open(join(DATA_DIR, 'markedAsDeleted.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
@@ -154,18 +218,7 @@ def handleDeletion(cursor):
 if __name__ == '__main__':
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
-    chats = db.chats
-    ban = db.banactions
-    deletion = db.deleteactions
 
-    print('# of chats', chats.estimated_document_count())
-    print('# of ban', ban.estimated_document_count())
-    print('# of deletion', deletion.estimated_document_count())
-
-    chatCursor = chats.find()
-    banCursor = ban.find()
-    deletionCursor = deletion.find()
-
-    handleChat(chatCursor)
-    handleBan(banCursor)
-    handleDeletion(deletionCursor)
+    handleChat(db.chats)
+    # handleBan(db.banactions)
+    # handleDeletion(db.deleteactions)

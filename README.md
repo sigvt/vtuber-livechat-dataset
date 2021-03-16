@@ -6,11 +6,13 @@ Download dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-liv
 
 ## Format
 
-| filename              | summary                         | size    |
-| --------------------- | ------------------------------- | ------- |
-| `chat.csv`            | Live chat message (64,000,000+) | ~13 GiB |
-| `markedAsBan.csv`     | ban event (80,000+)             | ~9 MiB  |
-| `markedAsDeleted.csv` | deletion event (200,000+)       | ~25 MiB |
+| filename              | summary                                            | size     |
+| --------------------- | -------------------------------------------------- | -------- |
+| `chat.csv`            | Live chat messages with complete info (5,000,000+) | ~1 GiB   |
+| `chatFull.csv`        | Live chat messages (65,000,000+)                   | ~13 GiB  |
+| `superchat.csv`       | Superchat records                                  | <100 KiB |
+| `markedAsBanned.csv`  | Ban events (80,000+)                               | ~9 MiB   |
+| `markedAsDeleted.csv` | Deletion events (200,000+)                         | ~25 MiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
@@ -31,14 +33,28 @@ We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect li
 | id              | string           | anonymized chat id           |
 | channelId       | string           | anonymized author channel id |
 
+### Superchat
+
+| column          | type            | description                    |
+| --------------- | --------------- | ------------------------------ |
+| timestamp       | number          | unixtime                       |
+| amount          | number          | purchased amount               |
+| currency        | string          | currency symbol                |
+| color           | string          | superchat color (significance) |
+| body            | nullable string | chat message                   |
+| originVideoId   | string          | origin video id                |
+| originChannelId | string          | origin channel id              |
+| id              | string          | anonymized chat id             |
+| channelId       | string          | anonymized author channel id   |
+
 ### Ban
 
-| column          | type            | description           |
-| --------------- | --------------- | --------------------- |
-| timestamp       | nullable number | unixtime              |
-| channelId       | string          | anonymized channel id |
-| originVideoId   | string          | origin video id       |
-| originChannelId | string          | origin channel id     |
+| column          | type   | description           |
+| --------------- | ------ | --------------------- |
+| timestamp       | number | unixtime              |
+| channelId       | string | anonymized channel id |
+| originVideoId   | string | origin video id       |
+| originChannelId | string | origin channel id     |
 
 ### Deletion
 
@@ -75,7 +91,7 @@ Combining the fact that we cannot write a blank chat (except for superchat) with
 ## Provenance
 
 - **Source:** YouTube Live Chat events (all live streams covered by [Holodex](https://holodex.net))
-- **Temporal Coverage:** from 2021-01-16
+- **Temporal Coverage:** start from 2021-01-16 (live chat), 2021-03-16 (superchat)
 - **Tool:** [Honeybee](https://github.com/uetchy/honeybee)
 
 ## Research Ideas
