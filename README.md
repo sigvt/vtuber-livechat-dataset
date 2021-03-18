@@ -2,50 +2,51 @@
 
 Massive collection of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and all other NLP projects.
 
-Download dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
+Download all datasets from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
 ## Format
 
-| filename              | summary                                            | size     |
-| --------------------- | -------------------------------------------------- | -------- |
-| `chat.csv`            | Live chat messages with complete info (5,000,000+) | ~1 GiB   |
-| `chatFull.csv`        | Live chat messages (65,000,000+)                   | ~13 GiB  |
-| `superchat.csv`       | Superchat records                                  | <100 KiB |
-| `markedAsBanned.csv`  | Ban events (80,000+)                               | ~9 MiB   |
-| `markedAsDeleted.csv` | Deletion events (200,000+)                         | ~25 MiB  |
+| filename              | summary                                                | size    |
+| --------------------- | ------------------------------------------------------ | ------- |
+| `chat.csv`            | Live chat messages (9,000,000+)                        | ~2 GiB  |
+| `chatLegacy.csv`      | Live chat messages w/ incomplete columns (60,000,000+) | ~12 GiB |
+| `markedAsDeleted.csv` | Deletion events (200,000+)                             | ~30 MiB |
+| `markedAsBanned.csv`  | Ban events (75,000+)                                   | ~10 MiB |
+| `superchat.csv`       | Superchat messages (20,000+)                           | ~5 MiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
-We employed [Honeybee](https://github.com/uetchy/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by SHA-256 hashing algorithm with grain of salt.
+We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by SHA-256 hashing algorithm with grain of salt.
 
 ### Chat
 
-| column          | type             | description                  |
-| --------------- | ---------------- | ---------------------------- |
-| timestamp       | number           | unixtime                     |
-| body            | nullable string  | chat message                 |
-| isModerator     | boolean          | is moderator                 |
-| isVerified      | boolean          | is verified                  |
-| isSuperchat     | nullable boolean | is superchat                 |
-| isMembership    | nullable boolean | membership status            |
-| originVideoId   | string           | origin video id              |
-| originChannelId | string           | origin channel id            |
-| id              | string           | anonymized chat id           |
-| channelId       | string           | anonymized author channel id |
+| column          | type            | description                  |
+| --------------- | --------------- | ---------------------------- |
+| timestamp       | number          | unixtime                     |
+| body            | nullable string | chat message                 |
+| isModerator     | boolean         | is moderator                 |
+| isVerified      | boolean         | is verified                  |
+| isSuperchat     | boolean         | is superchat                 |
+| isMembership    | boolean         | membership status            |
+| originVideoId   | string          | origin video id              |
+| originChannelId | string          | origin channel id            |
+| id              | string          | anonymized chat id           |
+| channelId       | string          | anonymized author channel id |
 
 ### Superchat
 
-| column          | type            | description                    |
-| --------------- | --------------- | ------------------------------ |
-| timestamp       | number          | unixtime                       |
-| amount          | number          | purchased amount               |
-| currency        | string          | currency symbol                |
-| color           | string          | superchat color (significance) |
-| body            | nullable string | chat message                   |
-| originVideoId   | string          | origin video id                |
-| originChannelId | string          | origin channel id              |
-| id              | string          | anonymized chat id             |
-| channelId       | string          | anonymized author channel id   |
+| column          | type            | description                             |
+| --------------- | --------------- | --------------------------------------- |
+| timestamp       | number          | unixtime                                |
+| amount          | number          | purchased amount                        |
+| currency        | string          | currency symbol                         |
+| significance    | number          | superchat significance (1:blue - 7:red) |
+| color           | string          | superchat color                         |
+| body            | nullable string | chat message                            |
+| originVideoId   | string          | origin video id                         |
+| originChannelId | string          | origin channel id                       |
+| id              | string          | anonymized chat id                      |
+| channelId       | string          | anonymized author channel id            |
 
 ### Ban
 
@@ -86,13 +87,13 @@ Because we started collecting membership status since 2021-03-14T06:23:14+09:00,
 
 ### Superchat
 
-Combining the fact that we cannot write a blank chat (except for superchat) with that we started collecting superchat details since 2021-03-14T06:23:14+09:00, chats with empty `body` before then suppose to be superchat.
+Combining the fact that we cannot write a blank chat (except for superchat) with that we started collecting superchat details since 2021-03-14T06:23:14+09:00, chats with empty `body` before then can be treated as superchat.
 
 ## Provenance
 
-- **Source:** YouTube Live Chat events (all live streams covered by [Holodex](https://holodex.net))
+- **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net))
 - **Temporal Coverage:** start from 2021-01-16 (live chat), 2021-03-16 (superchat)
-- **Tool:** [Honeybee](https://github.com/uetchy/honeybee)
+- **Tool:** [Honeybee](https://github.com/holodata/honeybee)
 
 ## Research Ideas
 
@@ -110,7 +111,7 @@ Combining the fact that we cannot write a blank chat (except for superchat) with
   year={2021},
   month={3},
   version={1.0},
-  url={https://github.com/uetchy/vtuber-livechat-dataset}
+  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```
 

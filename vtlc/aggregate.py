@@ -39,14 +39,14 @@ def handleChat(col):
     # cursor = col.aggregate(pipeline, allowDiskUse=True)
     cursor = col.find()
 
-    chatFullFp = open(join(DATA_DIR, 'chatFull.csv'), 'w', encoding='UTF8')
+    chatLegacyFp = open(join(DATA_DIR, 'chatLegacy.csv'), 'w', encoding='UTF8')
     chatFp = open(join(DATA_DIR, 'chat.csv'), 'w', encoding='UTF8')
     superchatFp = open(join(DATA_DIR, 'superchat.csv'), 'w', encoding='UTF8')
-    chatFullWriter = csv.writer(chatFullFp)
+    chatLegacyWriter = csv.writer(chatLegacyFp)
     chatWriter = csv.writer(chatFp)
     superchatWriter = csv.writer(superchatFp)
 
-    chatHeader = [
+    chatWriter.writerow([
         'timestamp',
         'body',
         'isModerator',
@@ -57,14 +57,24 @@ def handleChat(col):
         'originChannelId',
         'id',
         'channelId',
-    ]
+    ])
 
-    chatFullWriter.writerow(chatHeader)
-    chatWriter.writerow(chatHeader)
+    chatLegacyWriter.writerow([
+        'timestamp',
+        'body',
+        'isModerator',
+        'isVerified',
+        'originVideoId',
+        'originChannelId',
+        'id',
+        'channelId',
+    ])
+
     superchatWriter.writerow([
         'timestamp',
         'amount',
         'currency',
+        'significance',
         'color',
         'body',
         'originVideoId',
@@ -81,6 +91,15 @@ def handleChat(col):
         '4293284096': 'orange',
         '4290910299': 'violet',
         '4291821568': 'red',
+    }
+    superchatSignificance = {
+        'blue': 1,
+        'cyan': 2,
+        'green': 3,
+        'yellow': 4,
+        'orange': 5,
+        'violet': 6,
+        'red': 7,
     }
 
     for doc in cursor:
@@ -109,10 +128,12 @@ def handleChat(col):
             amount = doc['purchase']['amount']
             currency = doc['purchase']['currency']
             bgcolor = superchatColors[doc['purchase']['headerBackgroundColor']]
+            significance = superchatSignificance[bgcolor]
             superchatWriter.writerow([
                 timestamp,
                 amount,
                 currency,
+                significance,
                 bgcolor,
                 text,
                 originVideoId,
@@ -125,25 +146,34 @@ def handleChat(col):
             isMembership = None
             isSuperchat = 1 if text == '' else None
 
-        row = [
-            timestamp,
-            text,
-            isModerator,
-            isVerified,
-            isSuperchat,
-            isMembership,
-            originVideoId,
-            originChannelId,
-            id,
-            channelId,
-        ]
-
         if not isMembershipAndSuperchatMissing:
-            chatWriter.writerow(row)
+            chatWriter.writerow([
+                timestamp,
+                text,
+                isModerator,
+                isVerified,
+                isSuperchat,
+                isMembership,
+                originVideoId,
+                originChannelId,
+                id,
+                channelId,
+            ])
+        else:
+            chatLegacyWriter.writerow([
+                timestamp,
+                text,
+                isModerator,
+                isVerified,
+                originVideoId,
+                originChannelId,
+                id,
+                channelId,
+            ])
 
-        chatFullWriter.writerow(row)
-
-    chatFullFp.close()
+    chatFp.close()
+    chatLegacyFp.close()
+    superchatFp.close()
 
 
 def handleBan(col):
@@ -168,6 +198,9 @@ def handleBan(col):
         originChannelId = doc['originChannelId']
         timestamp = round(int(doc['timestampUsec']) /
                           1000) if 'timestampUsec' in doc else None
+
+        if not timestamp:
+            continue
 
         writer.writerow([
             timestamp,
@@ -204,6 +237,9 @@ def handleDeletion(col):
         timestamp = round(int(doc['timestampUsec']) /
                           1000) if 'timestampUsec' in doc else None
 
+        if not timestamp:
+            continue
+
         writer.writerow([
             timestamp,
             id,
@@ -220,5 +256,5 @@ if __name__ == '__main__':
     db = client.vespa
 
     handleChat(db.chats)
-    # handleBan(db.banactions)
-    # handleDeletion(db.deleteactions)
+    handleBan(db.banactions)
+    handleDeletion(db.deleteactions)
