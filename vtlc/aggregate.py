@@ -32,17 +32,36 @@ def convertRawMessageToString(rawMessage):
     return "".join([handler(run) for run in rawMessage])
 
 
-def handleChat(col):
+def handleChat(col, skipLegacy=True):
     print('# of chats', col.estimated_document_count())
+    if skipLegacy:
+        print('skipping creating legacy dataset')
 
-    # pipeline = [{'$skip': 60000000}]
-    # cursor = col.aggregate(pipeline, allowDiskUse=True)
-    cursor = col.find()
+    channels = pd.read_csv(join(DATA_DIR, 'channels.csv'))
 
-    chatLegacyFp = open(join(DATA_DIR, 'chatLegacy.csv'), 'w', encoding='UTF8')
+    if skipLegacy:
+        pipeline = [{'$skip': 60000000}]
+        cursor = col.aggregate(pipeline, allowDiskUse=True)
+    else:
+        cursor = col.find()
+
+        chatLegacyFp = open(join(DATA_DIR, 'chatLegacy.csv'),
+                            'w',
+                            encoding='UTF8')
+        chatLegacyWriter = csv.writer(chatLegacyFp)
+        chatLegacyWriter.writerow([
+            'timestamp',
+            'body',
+            'isModerator',
+            'isVerified',
+            'originVideoId',
+            'originChannelId',
+            'id',
+            'channelId',
+        ])
+
     chatFp = open(join(DATA_DIR, 'chat.csv'), 'w', encoding='UTF8')
     superchatFp = open(join(DATA_DIR, 'superchat.csv'), 'w', encoding='UTF8')
-    chatLegacyWriter = csv.writer(chatLegacyFp)
     chatWriter = csv.writer(chatFp)
     superchatWriter = csv.writer(superchatFp)
 
@@ -59,17 +78,6 @@ def handleChat(col):
         'channelId',
     ])
 
-    chatLegacyWriter.writerow([
-        'timestamp',
-        'body',
-        'isModerator',
-        'isVerified',
-        'originVideoId',
-        'originChannelId',
-        'id',
-        'channelId',
-    ])
-
     superchatWriter.writerow([
         'timestamp',
         'amount',
@@ -78,31 +86,43 @@ def handleChat(col):
         'color',
         'body',
         'originVideoId',
-        'originChannelId',
+        'originChannel',
+        'originAffiliation',
         'id',
         'channelId',
     ])
 
     superchatColors = {
         '4279592384': 'blue',
-        '4278237396': 'cyan',
+        '4278237396': 'lightblue',
         '4278239141': 'green',
         '4294947584': 'yellow',
         '4293284096': 'orange',
-        '4290910299': 'violet',
+        '4290910299': 'magenta',
         '4291821568': 'red',
     }
     superchatSignificance = {
         'blue': 1,
-        'cyan': 2,
+        'lightblue': 2,
         'green': 3,
         'yellow': 4,
         'orange': 5,
-        'violet': 6,
+        'magenta': 6,
         'red': 7,
     }
 
     for doc in cursor:
+        timestamp = round(int(doc['timestampUsec']) / 1000)
+
+        # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
+        isIncorrectSuperchat = timestamp < 1615850372123
+
+        if skipLegacy and isMembershipAndSuperchatMissing:
+            continue
+
+        # handle missing columns cases before 2021-03-13T21:23:14.000Z
+        isMembershipAndSuperchatMissing = timestamp < 1615670594000
+
         # anonymize id and author channel id with grain of salt
         id = hashlib.sha256(
             (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
@@ -116,19 +136,17 @@ def handleChat(col):
         isMembership = 1 if 'membership' in doc else 0
         isModerator = 1 if doc['isModerator'] else 0
         isVerified = 1 if doc['isVerified'] else 0
-        timestamp = round(int(doc['timestampUsec']) / 1000)
-
-        # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
-        isIncorrectSuperchat = timestamp < 1615850372123
-
-        # handle missing columns cases before 2021-03-13T21:23:14.000Z
-        isMembershipAndSuperchatMissing = timestamp < 1615670594000
 
         if isSuperchat and not isIncorrectSuperchat:
             amount = doc['purchase']['amount']
             currency = doc['purchase']['currency']
             bgcolor = superchatColors[doc['purchase']['headerBackgroundColor']]
             significance = superchatSignificance[bgcolor]
+
+            origin = channels[channels['channelId'] == originChannelId].iloc[0]
+            originChannel = origin['name_en']
+            originAffiliation = origin['affiliation']
+
             superchatWriter.writerow([
                 timestamp,
                 amount,
@@ -137,7 +155,8 @@ def handleChat(col):
                 bgcolor,
                 text,
                 originVideoId,
-                originChannelId,
+                originChannel,
+                originAffiliation,
                 id,
                 channelId,
             ])
@@ -159,7 +178,7 @@ def handleChat(col):
                 id,
                 channelId,
             ])
-        else:
+        elif not skipLegacy:
             chatLegacyWriter.writerow([
                 timestamp,
                 text,
@@ -172,7 +191,8 @@ def handleChat(col):
             ])
 
     chatFp.close()
-    chatLegacyFp.close()
+    if not skipLegacy:
+        chatLegacyFp.close()
     superchatFp.close()
 
 

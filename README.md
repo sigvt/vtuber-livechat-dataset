@@ -8,17 +8,18 @@ Download all datasets from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtube
 
 | filename              | summary                                                | size    |
 | --------------------- | ------------------------------------------------------ | ------- |
-| `chat.csv`            | Live chat messages (9,000,000+)                        | ~2 GiB  |
+| `chat.csv`            | Live chat messages (12,000,000+)                       | ~2 GiB  |
 | `chatLegacy.csv`      | Live chat messages w/ incomplete columns (60,000,000+) | ~12 GiB |
 | `markedAsDeleted.csv` | Deletion events (200,000+)                             | ~30 MiB |
 | `markedAsBanned.csv`  | Ban events (75,000+)                                   | ~10 MiB |
 | `superchat.csv`       | Superchat messages (20,000+)                           | ~5 MiB  |
+| `channels.csv`        | Channel index                                          | 40 KiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by SHA-256 hashing algorithm with grain of salt.
 
-### Chat
+### Chat (`chat.csv`)
 
 | column          | type            | description                  |
 | --------------- | --------------- | ---------------------------- |
@@ -33,22 +34,35 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | id              | string          | anonymized chat id           |
 | channelId       | string          | anonymized author channel id |
 
-### Superchat
+### Superchat (`superchat.csv`)
 
-| column          | type            | description                             |
-| --------------- | --------------- | --------------------------------------- |
-| timestamp       | number          | unixtime                                |
-| amount          | number          | purchased amount                        |
-| currency        | string          | currency symbol                         |
-| significance    | number          | superchat significance (1:blue - 7:red) |
-| color           | string          | superchat color                         |
-| body            | nullable string | chat message                            |
-| originVideoId   | string          | origin video id                         |
-| originChannelId | string          | origin channel id                       |
-| id              | string          | anonymized chat id                      |
-| channelId       | string          | anonymized author channel id            |
+| column            | type            | description                  |
+| ----------------- | --------------- | ---------------------------- |
+| timestamp         | number          | unixtime                     |
+| amount            | number          | purchased amount             |
+| currency          | string          | currency symbol              |
+| significance      | number          | significance                 |
+| color             | string          | color                        |
+| body              | nullable string | chat message                 |
+| originVideoId     | string          | origin video id              |
+| originChannel     | string          | origin channel name          |
+| originAffiliation | string          | origin affiliation           |
+| id                | string          | anonymized chat id           |
+| channelId         | string          | anonymized author channel id |
 
-### Ban
+#### Color and Significance
+
+| color     | significance |
+| --------- | ------------ |
+| blue      | 1            |
+| lightblue | 2            |
+| green     | 3            |
+| yellow    | 4            |
+| orange    | 5            |
+| magenta   | 6            |
+| red       | 7            |
+
+### Ban (`markedAsBanned.csv`)
 
 | column          | type   | description           |
 | --------------- | ------ | --------------------- |
@@ -57,7 +71,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | originVideoId   | string | origin video id       |
 | originChannelId | string | origin channel id     |
 
-### Deletion
+### Deletion (`markedAsDeleted.csv`)
 
 | column          | type    | description                  |
 | --------------- | ------- | ---------------------------- |
@@ -66,6 +80,18 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | originVideoId   | string  | origin video id              |
 | originChannelId | string  | origin channel id            |
 | retracted       | boolean | is deleted by author oneself |
+
+### Channels (`channels.csv`)
+
+| column      | type   | description         |
+| ----------- | ------ | ------------------- |
+| channelId   | string | channel id          |
+| name        | string | channel name        |
+| name_en     | string | channel name (en)   |
+| affiliation | string | channel affiliation |
+| group       | string | group               |
+| sub_count   | string | subscription count  |
+| video_count | string | uploads count       |
 
 ## Consideration
 

@@ -1,7 +1,6 @@
 all: build upload
 
 build:
-	rm -rf data/*.csv
 	python3 -m vtlc.aggregate
 
 upload:
