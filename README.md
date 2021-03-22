@@ -1,3 +1,5 @@
+![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
+
 # Vtuber 50M: Live Chat Dataset
 
 Massive collection of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and all other NLP projects.
@@ -8,11 +10,11 @@ Download all datasets from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtube
 
 | filename              | summary                                                | size    |
 | --------------------- | ------------------------------------------------------ | ------- |
-| `chat.csv`            | Live chat messages (12,000,000+)                       | ~2 GiB  |
+| `chat.csv`            | Live chat messages (16,000,000+)                       | ~4 GiB  |
 | `chatLegacy.csv`      | Live chat messages w/ incomplete columns (60,000,000+) | ~12 GiB |
-| `markedAsDeleted.csv` | Deletion events (200,000+)                             | ~30 MiB |
-| `markedAsBanned.csv`  | Ban events (75,000+)                                   | ~10 MiB |
-| `superchat.csv`       | Superchat messages (20,000+)                           | ~5 MiB  |
+| `markedAsDeleted.csv` | Deletion events (250,000+)                             | ~40 MiB |
+| `markedAsBanned.csv`  | Ban events (80,000+)                                   | ~10 MiB |
+| `superchat.csv`       | Superchat messages (40,000+)                           | ~13 MiB |
 | `channels.csv`        | Channel index                                          | 40 KiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
@@ -23,7 +25,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 | column          | type            | description                  |
 | --------------- | --------------- | ---------------------------- |
-| timestamp       | number          | unixtime                     |
+| timestamp       | string          | UTC timestamp                |
 | body            | nullable string | chat message                 |
 | isModerator     | boolean         | is moderator                 |
 | isVerified      | boolean         | is verified                  |
@@ -38,7 +40,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 | column            | type            | description                  |
 | ----------------- | --------------- | ---------------------------- |
-| timestamp         | number          | unixtime                     |
+| timestamp         | string          | UTC timestamp                |
 | amount            | number          | purchased amount             |
 | currency          | string          | currency symbol              |
 | significance      | number          | significance                 |
@@ -47,6 +49,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | originVideoId     | string          | origin video id              |
 | originChannel     | string          | origin channel name          |
 | originAffiliation | string          | origin affiliation           |
+| originGroup       | string          | origin group                 |
 | id                | string          | anonymized chat id           |
 | channelId         | string          | anonymized author channel id |
 
@@ -66,7 +69,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 | column          | type   | description           |
 | --------------- | ------ | --------------------- |
-| timestamp       | number | unixtime              |
+| timestamp       | string | UTC timestamp         |
 | channelId       | string | anonymized channel id |
 | originVideoId   | string | origin video id       |
 | originChannelId | string | origin channel id     |
@@ -75,7 +78,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 | column          | type    | description                  |
 | --------------- | ------- | ---------------------------- |
-| timestamp       | number  | unixtime                     |
+| timestamp       | string  | UTC timestamp                |
 | id              | string  | anonymized chat id           |
 | originVideoId   | string  | origin video id              |
 | originChannelId | string  | origin channel id            |
@@ -83,15 +86,15 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 ### Channels (`channels.csv`)
 
-| column      | type   | description         |
-| ----------- | ------ | ------------------- |
-| channelId   | string | channel id          |
-| name        | string | channel name        |
-| name_en     | string | channel name (en)   |
-| affiliation | string | channel affiliation |
-| group       | string | group               |
-| sub_count   | string | subscription count  |
-| video_count | string | uploads count       |
+| column      | type            | description         |
+| ----------- | --------------- | ------------------- |
+| channelId   | string          | channel id          |
+| name        | string          | channel name        |
+| name_en     | nullable string | channel name (en)   |
+| affiliation | string          | channel affiliation |
+| group       | nullable string | group               |
+| sub_count   | string          | subscription count  |
+| video_count | string          | uploads count       |
 
 ## Consideration
 
@@ -143,5 +146,5 @@ Combining the fact that we cannot write a blank chat (except for superchat) with
 
 ## License
 
-- Code: [MIT License](./LICENSE)
+- Code: [MIT License](https://github.com/holodata/vtuber-livechat-dataset/blob/master/LICENSE)
 - Dataset: [ODC Public Domain Dedication and Licence (PDDL)](https://opendatacommons.org/licenses/pddl/1-0/index.html)

@@ -1,7 +1,7 @@
 import csv
 import hashlib
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from os.path import dirname, join
 
 import pandas as pd
@@ -34,14 +34,23 @@ def convertRawMessageToString(rawMessage):
 
 def handleChat(col, skipLegacy=True):
     print('# of chats', col.estimated_document_count())
+
     if skipLegacy:
         print('skipping creating legacy dataset')
+
+    incorrectSuperchatEpoch = datetime.fromtimestamp(1615850372123 / 1000)
+    isMembershipAndSuperchatMissingEpoch = datetime.fromtimestamp(
+        1615670594000 / 1000)
 
     channels = pd.read_csv(join(DATA_DIR, 'channels.csv'))
 
     if skipLegacy:
-        pipeline = [{'$skip': 60000000}]
-        cursor = col.aggregate(pipeline, allowDiskUse=True)
+        # pipeline = [{'$skip': 60000000}]
+        # cursor = col.aggregate(pipeline, allowDiskUse=True)
+        cursor = col.find(
+            {'timestamp': {
+                '$gt': isMembershipAndSuperchatMissingEpoch
+            }})
     else:
         cursor = col.find()
 
@@ -88,6 +97,7 @@ def handleChat(col, skipLegacy=True):
         'originVideoId',
         'originChannel',
         'originAffiliation',
+        'originGroup',
         'id',
         'channelId',
     ])
@@ -112,16 +122,21 @@ def handleChat(col, skipLegacy=True):
     }
 
     for doc in cursor:
-        timestamp = round(int(doc['timestampUsec']) / 1000)
+        # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+        if not 'timestamp' in doc:
+            print(doc)
+            continue
+        timestamp = doc['timestamp']
+        # datetime(2002, 10, 27, 14, 0).replace(tzinfo=timezone.utc).timestamp()
 
-        # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
-        isIncorrectSuperchat = timestamp < 1615850372123
+        # handle missing columns cases before 2021-03-13T21:23:14.000Z
+        isMembershipAndSuperchatMissing = timestamp < isMembershipAndSuperchatMissingEpoch
 
         if skipLegacy and isMembershipAndSuperchatMissing:
             continue
 
-        # handle missing columns cases before 2021-03-13T21:23:14.000Z
-        isMembershipAndSuperchatMissing = timestamp < 1615670594000
+        # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
+        isIncorrectSuperchat = timestamp < incorrectSuperchatEpoch
 
         # anonymize id and author channel id with grain of salt
         id = hashlib.sha256(
@@ -144,11 +159,12 @@ def handleChat(col, skipLegacy=True):
             significance = superchatSignificance[bgcolor]
 
             origin = channels[channels['channelId'] == originChannelId].iloc[0]
-            originChannel = origin['name_en']
+            originChannel = origin['name_en'] or origin['name']
             originAffiliation = origin['affiliation']
+            originGroup = origin['group'] or None
 
             superchatWriter.writerow([
-                timestamp,
+                timestamp.replace(tzinfo=timezone.utc).isoformat(),
                 amount,
                 currency,
                 significance,
@@ -157,6 +173,7 @@ def handleChat(col, skipLegacy=True):
                 originVideoId,
                 originChannel,
                 originAffiliation,
+                originGroup,
                 id,
                 channelId,
             ])
@@ -167,7 +184,7 @@ def handleChat(col, skipLegacy=True):
 
         if not isMembershipAndSuperchatMissing:
             chatWriter.writerow([
-                timestamp,
+                timestamp.replace(tzinfo=timezone.utc).isoformat(),
                 text,
                 isModerator,
                 isVerified,
@@ -180,7 +197,7 @@ def handleChat(col, skipLegacy=True):
             ])
         elif not skipLegacy:
             chatLegacyWriter.writerow([
-                timestamp,
+                timestamp.replace(tzinfo=timezone.utc).isoformat(),
                 text,
                 isModerator,
                 isVerified,
@@ -198,7 +215,7 @@ def handleChat(col, skipLegacy=True):
 
 def handleBan(col):
     print('# of ban', col.estimated_document_count())
-    cursor = col.find({'timestampUsec': {'$exists': True}})
+    cursor = col.find()
     f = open(join(DATA_DIR, 'markedAsBanned.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
@@ -216,11 +233,8 @@ def handleBan(col):
             (doc['channelId'] + ANONYMIZATION_SALT).encode()).hexdigest()
         originVideoId = doc['originVideoId']
         originChannelId = doc['originChannelId']
-        timestamp = round(int(doc['timestampUsec']) /
-                          1000) if 'timestampUsec' in doc else None
-
-        if not timestamp:
-            continue
+        timestamp = doc['timestamp'].replace(
+            tzinfo=timezone.utc).isoformat() if 'timestamp' in doc else None
 
         writer.writerow([
             timestamp,
@@ -254,11 +268,8 @@ def handleDeletion(col):
         originVideoId = doc['originVideoId']
         originChannelId = doc['originChannelId']
         retracted = 1 if doc['retracted'] else 0
-        timestamp = round(int(doc['timestampUsec']) /
-                          1000) if 'timestampUsec' in doc else None
-
-        if not timestamp:
-            continue
+        timestamp = doc['timestamp'].replace(
+            tzinfo=timezone.utc).isoformat() if 'timestamp' in doc else None
 
         writer.writerow([
             timestamp,
