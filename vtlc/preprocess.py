@@ -4,6 +4,21 @@ from os.path import join, dirname
 
 DATA_DIR = join(dirname(__file__), '..', 'data')
 
+# https://vlueprint.org/
+
+# prefix vlueprint: <https://vlueprint.org/schema/>
+# prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# select ?CHANNEL ?NAME ?ORGLABEL {
+#   ?uri rdf:type vlueprint:VirtualBeing.
+#   ?uri rdfs:label ?NAME.
+#   ?uri vlueprint:youtubeChannelId ?CHANNEL.
+#   OPTIONAL {
+#     ?uri vlueprint:belongTo ?orgUri.
+#     ?orgUri rdfs:label ?ORGLABEL.
+#   }.
+# }
+
 
 def get_channels(offset=0, limit=100):
     payload = {

@@ -42,7 +42,7 @@ def handleChat(col, skipLegacy=True):
     isMembershipAndSuperchatMissingEpoch = datetime.fromtimestamp(
         1615670594000 / 1000)
 
-    channels = pd.read_csv(join(DATA_DIR, 'channels.csv'))
+    channels = pd.read_csv(join(DATA_DIR, 'channels.csv')).fillna("")
 
     if skipLegacy:
         # pipeline = [{'$skip': 60000000}]
@@ -161,7 +161,7 @@ def handleChat(col, skipLegacy=True):
             origin = channels[channels['channelId'] == originChannelId].iloc[0]
             originChannel = origin['name_en'] or origin['name']
             originAffiliation = origin['affiliation']
-            originGroup = origin['group'] or None
+            originGroup = origin['group']
 
             superchatWriter.writerow([
                 timestamp.replace(tzinfo=timezone.utc).isoformat(),
@@ -286,6 +286,6 @@ if __name__ == '__main__':
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
 
-    handleChat(db.chats)
+    handleChat(db.chats, skipLegacy=True)
     handleBan(db.banactions)
     handleDeletion(db.deleteactions)

@@ -1,8 +1,8 @@
 ![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
 
-# Vtuber 50M: Live Chat Dataset
+# Vtuber 100M: Live Chat and Moderation Events Dataset
 
-Massive collection of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and all other NLP projects.
+Massive collection of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and any kind of NLP projects.
 
 Download all datasets from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
@@ -10,16 +10,16 @@ Download all datasets from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtube
 
 | filename              | summary                                                | size    |
 | --------------------- | ------------------------------------------------------ | ------- |
-| `chat.csv`            | Live chat messages (16,000,000+)                       | ~4 GiB  |
-| `chatLegacy.csv`      | Live chat messages w/ incomplete columns (60,000,000+) | ~12 GiB |
-| `markedAsDeleted.csv` | Deletion events (250,000+)                             | ~40 MiB |
-| `markedAsBanned.csv`  | Ban events (80,000+)                                   | ~10 MiB |
-| `superchat.csv`       | Superchat messages (40,000+)                           | ~13 MiB |
+| `chat.csv`            | Live chat messages (37,000,000+)                       | ~8 GiB  |
+| `chatLegacy.csv`      | Live chat messages w/ incomplete columns (60,000,000+) | ~13 GiB |
+| `markedAsDeleted.csv` | Deletion events                                        | ~40 MiB |
+| `markedAsBanned.csv`  | Ban events                                             | ~10 MiB |
+| `superchat.csv`       | Super chat messages (120,000+)                         | ~30 MiB |
 | `channels.csv`        | Channel index                                          | 40 KiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
-We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from dataset, and author channel id are anonymized by SHA-256 hashing algorithm with grain of salt.
+We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-256 hashing algorithm with a grain of salt.
 
 ### Chat (`chat.csv`)
 
@@ -29,7 +29,7 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | body            | nullable string | chat message                 |
 | isModerator     | boolean         | is moderator                 |
 | isVerified      | boolean         | is verified                  |
-| isSuperchat     | boolean         | is superchat                 |
+| isSuperchat     | boolean         | is super chat                |
 | isMembership    | boolean         | membership status            |
 | originVideoId   | string          | origin video id              |
 | originChannelId | string          | origin channel id            |
@@ -116,7 +116,7 @@ Because we started collecting membership status since 2021-03-14T06:23:14+09:00,
 
 ### Superchat
 
-Combining the fact that we cannot write a blank chat (except for superchat) with that we started collecting superchat details since 2021-03-14T06:23:14+09:00, chats with empty `body` before then can be treated as superchat.
+Combining the fact that we cannot write a blank chat (except for super chat) with that we started collecting super chat details since 2021-03-14T06:23:14+09:00, chats with empty `body` before then can be treated as super chat.
 
 ## Provenance
 
@@ -135,12 +135,12 @@ Combining the fact that we cannot write a blank chat (except for superchat) with
 
 ```latex
 @misc{vtuber-livechat-dataset,
-  author={Yasuaki Uechi},
-  title={Vtuber 50M: Large Scale Virtual YouTubers Live Chat Dataset},
-  year={2021},
-  month={3},
-  version={1.0},
-  url={https://github.com/holodata/vtuber-livechat-dataset}
+ author={Yasuaki Uechi},
+ title={Vtuber 100M: Large Scale Virtual YouTubers Live Chat Dataset},
+ year={2021},
+ month={3},
+ version={1.0},
+ url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```
 
