@@ -53,12 +53,11 @@ def create_channel_index():
     ])
 
     for channel in get_channels():
-        print(channel['name'])
         writer.writerow([
             channel['id'],
             channel['name'],
             channel['english_name'],
-            channel['org'],
+            channel['org'] or 'Independents',
             channel['group'],
             channel['subscriber_count'],
             channel['video_count'],
