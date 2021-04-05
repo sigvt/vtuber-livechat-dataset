@@ -1,20 +1,20 @@
 ![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
 
-# Vtuber 100M: Live Chat and Moderation Events Dataset
+# Vtuber 100M: Live Chat and Moderation Events
 
-Massive collection of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, carefully crafted that can be used for academic research and any kind of NLP projects.
+Huge collection of hundreds of millions of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
-Download all datasets from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
+Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
 ## Format
 
 | filename              | summary                                                | size    |
 | --------------------- | ------------------------------------------------------ | ------- |
-| `chat.csv`            | Live chat messages (37,000,000+)                       | ~8 GiB  |
+| `chat.csv`            | Live chat messages (48,000,000+)                       | ~10 GiB |
 | `chatLegacy.csv`      | Live chat messages w/ incomplete columns (60,000,000+) | ~13 GiB |
-| `markedAsDeleted.csv` | Deletion events                                        | ~40 MiB |
+| `markedAsDeleted.csv` | Deletion events                                        | ~50 MiB |
 | `markedAsBanned.csv`  | Ban events                                             | ~10 MiB |
-| `superchat.csv`       | Super chat messages (120,000+)                         | ~30 MiB |
+| `superchat.csv`       | Super chat messages (170,000+)                         | ~50 MiB |
 | `channels.csv`        | Channel index                                          | 40 KiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
@@ -120,7 +120,7 @@ Combining the fact that we cannot write a blank chat (except for super chat) wit
 
 ## Provenance
 
-- **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net))
+- **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net), including Hololive, Nijisanji, 774inc, etc)
 - **Temporal Coverage:** start from 2021-01-16 (live chat), 2021-03-16 (superchat)
 - **Tool:** [Honeybee](https://github.com/holodata/honeybee)
 
@@ -139,7 +139,7 @@ Combining the fact that we cannot write a blank chat (except for super chat) wit
  title={Vtuber 100M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={1.0},
+ version={18},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```

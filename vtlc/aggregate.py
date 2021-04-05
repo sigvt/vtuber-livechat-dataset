@@ -39,7 +39,7 @@ def handleChat(col, skipLegacy=True):
         print('skipping creating legacy dataset')
 
     incorrectSuperchatEpoch = datetime.fromtimestamp(1615850372123 / 1000)
-    isMembershipAndSuperchatMissingEpoch = datetime.fromtimestamp(
+    missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
         1615670594000 / 1000)
 
     channels = pd.read_csv(join(DATA_DIR, 'channels.csv')).fillna("")
@@ -49,7 +49,7 @@ def handleChat(col, skipLegacy=True):
         # cursor = col.aggregate(pipeline, allowDiskUse=True)
         cursor = col.find(
             {'timestamp': {
-                '$gt': isMembershipAndSuperchatMissingEpoch
+                '$gt': missingMembershipAndSuperchatColumnEpoch
             }})
     else:
         cursor = col.find()
@@ -130,7 +130,7 @@ def handleChat(col, skipLegacy=True):
         # datetime(2002, 10, 27, 14, 0).replace(tzinfo=timezone.utc).timestamp()
 
         # handle missing columns cases before 2021-03-13T21:23:14.000Z
-        isMembershipAndSuperchatMissing = timestamp < isMembershipAndSuperchatMissingEpoch
+        isMembershipAndSuperchatMissing = timestamp < missingMembershipAndSuperchatColumnEpoch
 
         if skipLegacy and isMembershipAndSuperchatMissing:
             continue
