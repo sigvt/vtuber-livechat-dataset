@@ -2,12 +2,12 @@
 
 ## Accumulate data
 
-We use [honeybee](https://github.com/uetchy/honeybee) to collect live chat data from YouTube.
+We use [Honeybee](https://github.com/holodata/honeybee) to collect live chat data from YouTube.
 
 ## Generate CSV from MongoDB database
 
 ```
-MONGODB_URI=<mongo_uri> make generate
+MONGODB_URI=<mongo_uri> make build
 ```
 
 ## Upload new version of dataset (Maintainers only)
