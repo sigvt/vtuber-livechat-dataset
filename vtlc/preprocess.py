@@ -45,11 +45,11 @@ def create_channel_index():
     writer.writerow([
         'channelId',
         'name',
-        'name_en',
+        'name.en',
         'affiliation',
         'group',
-        'sub_count',
-        'video_count',
+        'subscriptionCount',
+        'videoCount',
     ])
 
     for channel in get_channels():

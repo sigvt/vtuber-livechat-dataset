@@ -1,3 +1,5 @@
+import argparse
+import calendar
 import csv
 import hashlib
 import os
@@ -6,10 +8,40 @@ from os.path import dirname, join
 
 import pandas as pd
 import pymongo
+from dateutil.relativedelta import relativedelta
 
 ANONYMIZATION_SALT = os.environ.get('ANONYMIZATION_SALT')
 MONGODB_URI = os.environ.get('MONGODB_URI')
 DATA_DIR = join(dirname(__file__), '..', 'data')
+
+superchatColors = {
+    '4279592384': 'blue',
+    '4278237396': 'lightblue',
+    '4278239141': 'green',
+    '4294947584': 'yellow',
+    '4293284096': 'orange',
+    '4290910299': 'magenta',
+    '4291821568': 'red',
+}
+
+superchatSignificance = {
+    'blue': 1,
+    'lightblue': 2,
+    'green': 3,
+    'yellow': 4,
+    'orange': 5,
+    'magenta': 6,
+    'red': 7,
+}
+
+# handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
+incorrectSuperchatEpoch = datetime.fromtimestamp(
+    1615850372123 / 1000).replace(tzinfo=timezone.utc)
+
+# handle missing columns cases before 2021-03-13T21:23:14.000Z
+missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
+    1615670594000 / 1000).replace(tzinfo=timezone.utc)
+# missingMembershipAndSuperchatColumnEpoch < incorrectSuperchatEpoch
 
 
 def convertRawMessageToString(rawMessage):
@@ -32,61 +64,16 @@ def convertRawMessageToString(rawMessage):
     return "".join([handler(run) for run in rawMessage])
 
 
-def handleChat(col, skipLegacy=True):
+def accumulateChat(col, recentOnly=False):
     print('# of chats', col.estimated_document_count())
 
-    if skipLegacy:
-        print('skipping creating legacy dataset')
-
-    incorrectSuperchatEpoch = datetime.fromtimestamp(1615850372123 / 1000)
-    missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
-        1615670594000 / 1000)
+    if recentOnly:
+        print('Only process recent history')
 
     channels = pd.read_csv(join(DATA_DIR, 'channels.csv')).fillna("")
 
-    if skipLegacy:
-        # pipeline = [{'$skip': 60000000}]
-        # cursor = col.aggregate(pipeline, allowDiskUse=True)
-        cursor = col.find(
-            {'timestamp': {
-                '$gt': missingMembershipAndSuperchatColumnEpoch
-            }})
-    else:
-        cursor = col.find()
-
-        chatLegacyFp = open(join(DATA_DIR, 'chatLegacy.csv'),
-                            'w',
-                            encoding='UTF8')
-        chatLegacyWriter = csv.writer(chatLegacyFp)
-        chatLegacyWriter.writerow([
-            'timestamp',
-            'body',
-            'isModerator',
-            'isVerified',
-            'originVideoId',
-            'originChannelId',
-            'id',
-            'channelId',
-        ])
-
-    chatFp = open(join(DATA_DIR, 'chat.csv'), 'w', encoding='UTF8')
-    superchatFp = open(join(DATA_DIR, 'superchat.csv'), 'w', encoding='UTF8')
-    chatWriter = csv.writer(chatFp)
+    superchatFp = open(join(DATA_DIR, 'superchats.csv'), 'w', encoding='UTF8')
     superchatWriter = csv.writer(superchatFp)
-
-    chatWriter.writerow([
-        'timestamp',
-        'body',
-        'isModerator',
-        'isVerified',
-        'isSuperchat',
-        'isMembership',
-        'originVideoId',
-        'originChannelId',
-        'id',
-        'channelId',
-    ])
-
     superchatWriter.writerow([
         'timestamp',
         'amount',
@@ -94,129 +81,133 @@ def handleChat(col, skipLegacy=True):
         'significance',
         'color',
         'body',
+        'id',
+        'channelId',
         'originVideoId',
         'originChannel',
         'originAffiliation',
         'originGroup',
-        'id',
-        'channelId',
     ])
 
-    superchatColors = {
-        '4279592384': 'blue',
-        '4278237396': 'lightblue',
-        '4278239141': 'green',
-        '4294947584': 'yellow',
-        '4293284096': 'orange',
-        '4290910299': 'magenta',
-        '4291821568': 'red',
-    }
-    superchatSignificance = {
-        'blue': 1,
-        'lightblue': 2,
-        'green': 3,
-        'yellow': 4,
-        'orange': 5,
-        'magenta': 6,
-        'red': 7,
-    }
+    def handleCursor(cursor, filename):
+        chatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
+        chatWriter = csv.writer(chatFp)
+        chatWriter.writerow([
+            'timestamp',
+            'body',
+            'membership',
+            'isModerator',
+            'isVerified',
+            'id',
+            'channelId',
+            'originVideoId',
+            'originChannelId',
+        ])
 
-    for doc in cursor:
-        # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
-        if not 'timestamp' in doc:
-            print(doc)
-            continue
-        timestamp = doc['timestamp']
-        # datetime(2002, 10, 27, 14, 0).replace(tzinfo=timezone.utc).timestamp()
+        for doc in cursor:
+            # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+            timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
 
-        # handle missing columns cases before 2021-03-13T21:23:14.000Z
-        isMembershipAndSuperchatMissing = timestamp < missingMembershipAndSuperchatColumnEpoch
+            # anonymize id and author channel id with grain of salt
+            id = hashlib.sha1(
+                (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
+            channelId = hashlib.sha1((doc['authorChannelId'] +
+                                      ANONYMIZATION_SALT).encode()).hexdigest()
 
-        if skipLegacy and isMembershipAndSuperchatMissing:
-            continue
+            text = convertRawMessageToString(doc['rawMessage'])
 
-        # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
-        isIncorrectSuperchat = timestamp < incorrectSuperchatEpoch
+            originVideoId = doc['originVideoId']
+            originChannelId = doc['originChannelId']
 
-        # anonymize id and author channel id with grain of salt
-        id = hashlib.sha256(
-            (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
-        channelId = hashlib.sha256(
-            (doc['authorChannelId'] + ANONYMIZATION_SALT).encode()).hexdigest()
-        text = convertRawMessageToString(doc['rawMessage'])
+            isSuperchat = 1 if 'purchase' in doc else 0
 
-        originVideoId = doc['originVideoId']
-        originChannelId = doc['originChannelId']
-        isSuperchat = 1 if 'purchase' in doc else 0
-        isMembership = 1 if 'membership' in doc else 0
-        isModerator = 1 if doc['isModerator'] else 0
-        isVerified = 1 if doc['isVerified'] else 0
+            # handle superchat
+            if isSuperchat:
+                isIncorrectSuperchat = timestamp < incorrectSuperchatEpoch
 
-        if isSuperchat and not isIncorrectSuperchat:
-            amount = doc['purchase']['amount']
-            currency = doc['purchase']['currency']
-            bgcolor = superchatColors[doc['purchase']['headerBackgroundColor']]
-            significance = superchatSignificance[bgcolor]
+                if not isIncorrectSuperchat:
+                    amount = doc['purchase']['amount']
+                    currency = doc['purchase']['currency']
+                    bgcolor = superchatColors[doc['purchase']
+                                              ['headerBackgroundColor']]
 
-            origin = channels[channels['channelId'] == originChannelId].iloc[0]
-            originChannel = origin['name_en'] or origin['name']
-            originAffiliation = origin['affiliation']
-            originGroup = origin['group']
+                    significance = superchatSignificance[bgcolor]
 
-            superchatWriter.writerow([
-                timestamp.replace(tzinfo=timezone.utc).isoformat(),
-                amount,
-                currency,
-                significance,
-                bgcolor,
-                text,
-                originVideoId,
-                originChannel,
-                originAffiliation,
-                originGroup,
-                id,
-                channelId,
-            ])
+                    origin = channels[channels['channelId'] ==
+                                      originChannelId].iloc[0]
+                    originChannel = origin['name.en'] or origin['name']
+                    originAffiliation = origin['affiliation']
+                    originGroup = origin['group']
 
-        if isMembershipAndSuperchatMissing:
-            isMembership = None
-            isSuperchat = 1 if text == '' else None
+                    superchatWriter.writerow([
+                        timestamp.isoformat(),
+                        amount,
+                        currency,
+                        significance,
+                        bgcolor,
+                        text,
+                        id,
+                        channelId,
+                        originVideoId,
+                        originChannel,
+                        originAffiliation,
+                        originGroup,
+                    ])
 
-        if not isMembershipAndSuperchatMissing:
+                continue
+
+            if 'membership' in doc:
+                if 'since' in doc['membership']:
+                    membership = doc['membership']['since']
+                else:
+                    membership = 'less than 1 month'
+            else:
+                membership = 'non-member'
+
+            isModerator = 1 if doc['isModerator'] else 0
+            isVerified = 1 if doc['isVerified'] else 0
+
             chatWriter.writerow([
-                timestamp.replace(tzinfo=timezone.utc).isoformat(),
+                timestamp.isoformat(),
                 text,
+                membership,
                 isModerator,
                 isVerified,
-                isSuperchat,
-                isMembership,
-                originVideoId,
-                originChannelId,
                 id,
                 channelId,
-            ])
-        elif not skipLegacy:
-            chatLegacyWriter.writerow([
-                timestamp.replace(tzinfo=timezone.utc).isoformat(),
-                text,
-                isModerator,
-                isVerified,
                 originVideoId,
                 originChannelId,
-                id,
-                channelId,
             ])
 
-    chatFp.close()
-    if not skipLegacy:
-        chatLegacyFp.close()
+        chatFp.close()
+
+    if recentOnly:
+        recent = datetime.utcnow() + relativedelta(months=-1)
+        cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
+    else:
+        cm = missingMembershipAndSuperchatColumnEpoch
+
+    while cm < datetime.utcnow().replace(tzinfo=timezone.utc):
+        nm = cm + relativedelta(months=+1)
+        nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
+        print('cm', cm)
+        print('nm', nm)
+        filename = f'chats_{cm.strftime("%Y-%m")}.csv'
+        cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
+        # do whatever
+        handleCursor(cursor, filename)
+        cm = nm
+
     superchatFp.close()
 
 
-def handleBan(col):
+def accumulateBan(col):
     print('# of ban', col.estimated_document_count())
-    cursor = col.find()
-    f = open(join(DATA_DIR, 'markedAsBanned.csv'), 'w', encoding='UTF8')
+    cursor = col.find(
+        {'timestamp': {
+            '$gte': missingMembershipAndSuperchatColumnEpoch
+        }})
+    f = open(join(DATA_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -229,7 +220,7 @@ def handleBan(col):
 
     for doc in cursor:
         # anonymize author channel id with grain of salt
-        channelId = hashlib.sha256(
+        channelId = hashlib.sha1(
             (doc['channelId'] + ANONYMIZATION_SALT).encode()).hexdigest()
         originVideoId = doc['originVideoId']
         originChannelId = doc['originChannelId']
@@ -246,10 +237,13 @@ def handleBan(col):
     f.close()
 
 
-def handleDeletion(col):
+def accumulateDeletion(col):
     print('# of deletion', col.estimated_document_count())
-    cursor = col.find()
-    f = open(join(DATA_DIR, 'markedAsDeleted.csv'), 'w', encoding='UTF8')
+    cursor = col.find(
+        {'timestamp': {
+            '$gte': missingMembershipAndSuperchatColumnEpoch
+        }})
+    f = open(join(DATA_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -263,7 +257,7 @@ def handleDeletion(col):
 
     for doc in cursor:
         # anonymize author channel id with grain of salt
-        id = hashlib.sha256(
+        id = hashlib.sha1(
             (doc['targetId'] + ANONYMIZATION_SALT).encode()).hexdigest()
         originVideoId = doc['originVideoId']
         originChannelId = doc['originChannelId']
@@ -283,9 +277,13 @@ def handleDeletion(col):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='dataset generator')
+    parser.add_argument('-R', '--recent-only', action='store_true')
+    args = parser.parse_args()
+
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
 
-    handleChat(db.chats, skipLegacy=True)
-    handleBan(db.banactions)
-    handleDeletion(db.deleteactions)
+    accumulateChat(db.chats, recentOnly=args.recent_only)
+    accumulateBan(db.banactions)
+    accumulateDeletion(db.deleteactions)

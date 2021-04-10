@@ -13,6 +13,7 @@ pymongo = "^3.11.3"
 streamlit = "^0.78.0"
 fsspec = "^0.8.7"
 plotly = "^4.14.3"
+python-dateutil = "^2.8.1"
 
 [tool.poetry.dev-dependencies]
 ipykernel = "^5.5.0"
