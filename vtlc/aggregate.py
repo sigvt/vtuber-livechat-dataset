@@ -34,13 +34,16 @@ superchatSignificance = {
     'red': 7,
 }
 
+# epoch time
+genesisEpoch = datetime.fromtimestamp(1610687733293 / 1000, timezone.utc)
+
 # handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
-incorrectSuperchatEpoch = datetime.fromtimestamp(
-    1615850372123 / 1000).replace(tzinfo=timezone.utc)
+incorrectSuperchatEpoch = datetime.fromtimestamp(1615850372123 / 1000,
+                                                 timezone.utc)
 
 # handle missing columns cases before 2021-03-13T21:23:14.000Z
 missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
-    1615670594000 / 1000).replace(tzinfo=timezone.utc)
+    1615670594000 / 1000, timezone.utc)
 # missingMembershipAndSuperchatColumnEpoch < incorrectSuperchatEpoch
 
 
@@ -164,6 +167,14 @@ def accumulateChat(col, recentOnly=False):
             else:
                 membership = 'non-member'
 
+            isMembershipAndSuperchatInfoMissing = timestamp < missingMembershipAndSuperchatColumnEpoch
+            if isMembershipAndSuperchatInfoMissing:
+                membership = 'unknown'
+
+            # skip chat with empty body
+            if not text:
+                continue
+
             isModerator = 1 if doc['isModerator'] else 0
             isVerified = 1 if doc['isVerified'] else 0
 
@@ -185,7 +196,7 @@ def accumulateChat(col, recentOnly=False):
         recent = datetime.utcnow() + relativedelta(months=-1)
         cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
     else:
-        cm = missingMembershipAndSuperchatColumnEpoch
+        cm = genesisEpoch
 
     while cm < datetime.utcnow().replace(tzinfo=timezone.utc):
         nm = cm + relativedelta(months=+1)
@@ -203,10 +214,7 @@ def accumulateChat(col, recentOnly=False):
 
 def accumulateBan(col):
     print('# of ban', col.estimated_document_count())
-    cursor = col.find(
-        {'timestamp': {
-            '$gte': missingMembershipAndSuperchatColumnEpoch
-        }})
+    cursor = col.find()
     f = open(join(DATA_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
@@ -239,10 +247,7 @@ def accumulateBan(col):
 
 def accumulateDeletion(col):
     print('# of deletion', col.estimated_document_count())
-    cursor = col.find(
-        {'timestamp': {
-            '$gte': missingMembershipAndSuperchatColumnEpoch
-        }})
+    cursor = col.find()
     f = open(join(DATA_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 

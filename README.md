@@ -8,44 +8,52 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 
 ## Format
 
-| filename                   | summary                                                  | size    |
-| -------------------------- | -------------------------------------------------------- | ------- |
-| `chats_<year>-<month>.csv` | Live chat messages (50,000,000+)                         | ~10 GiB |
-| `superchats.csv`           | Super chat messages (200,000+)                           | ~50 MiB |
-| `deletion_events.csv`      | Deletion events                                          | ~40 MiB |
-| `ban_events.csv`           | Ban events                                               | ~10 MiB |
-| `channels.csv`             | Channel index                                            | 40 KiB  |
-| `chats_legacy.csv`         | Live chat messages w/o membership info (will be removed) | ~13 GiB |
+| filename                   | summary                           | size    |
+| -------------------------- | --------------------------------- | ------- |
+| `chats_:year:-:month:.csv` | Live chat messages (120,000,000+) | ~21 GiB |
+| `superchats.csv`           | Super chat messages (230,000+)    | ~50 MiB |
+| `deletion_events.csv`      | Deletion events                   | ~40 MiB |
+| `ban_events.csv`           | Ban events                        | ~10 MiB |
+| `channels.csv`             | Channel index                     | 40 KiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
-### Chats (`chats_%Y-%m.csv`)
+### Chats (`chats_:year:-:month:.csv`)
 
-| column          | type            | description                  |
-| --------------- | --------------- | ---------------------------- |
-| timestamp       | string          | UTC timestamp                |
-| body            | nullable string | chat message                 |
-| membership      | string          | membership status            |
-| isModerator     | boolean         | is channel moderator         |
-| isVerified      | boolean         | is verified account          |
-| id              | string          | anonymized chat id           |
-| channelId       | string          | anonymized author channel id |
-| originVideoId   | string          | origin video id              |
-| originChannelId | string          | origin channel id            |
+| column          | type    | description                  |
+| --------------- | ------- | ---------------------------- |
+| timestamp       | string  | UTC timestamp                |
+| body            | string  | chat message                 |
+| membership      | string  | membership status            |
+| isModerator     | boolean | is channel moderator         |
+| isVerified      | boolean | is verified account          |
+| id              | string  | anonymized chat id           |
+| channelId       | string  | anonymized author channel id |
+| originVideoId   | string  | origin video id              |
+| originChannelId | string  | origin channel id            |
 
 #### Membership status
 
 | value             | duration                  |
 | ----------------- | ------------------------- |
-| non-member        | N/A                       |
+| unknown           | Indistinguishable         |
+| non-member        | 0                         |
 | less than 1 month | < 1 month                 |
 | 1 month           | >= 1 month, < 2 months    |
 | 2 months          | >= 2 months, < 6 months   |
 | 6 months          | >= 6 months, < 12 months  |
 | 1 year            | >= 12 months, < 24 months |
 | 2 years           | >= 24 months              |
+
+#### Pandas usage
+
+Set `keep_default_na` to `False` and `na_values` to `''` in `read_csv`. Otherwise, chat message like `NA` would incorrectly be treated as NaN value.
+
+```python
+chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv', na_values='', keep_default_na=False)
+```
 
 ### Superchats (`superchats.csv`)
 
@@ -86,6 +94,21 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | originVideoId   | string  | origin video id              |
 | originChannelId | string  | origin channel id            |
 
+#### Pandas usage
+
+Insert `deleted_by_mod` column to `chats` DataFrame:
+
+```python
+chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv', na_values='', keep_default_na=False)
+delet = pd.read_csv('../vtuber-livechat/deletion_events.csv', usecols=['id', 'retracted'])
+
+delet = delet[delet['retracted'] == 0]
+
+delet['deleted_by_mod'] = True
+chats = pd.merge(chats, delet[['id', 'deleted_by_mod']], how='left')
+chats['deleted_by_mod'].fillna(False, inplace=True)
+```
+
 ### Ban Events (`ban_events.csv`)
 
 Here **Ban** means either to place user in time out or to permanently hide the user's comments on the channel's current and future live streams. This mixup is due to the fact that these actions are indistinguishable from others with the extracted data from `markChatItemsByAuthorAsDeletedAction` event.
@@ -119,17 +142,16 @@ Here **Ban** means either to place user in time out or to permanently hide the u
 
 All custom emojis are replaced with a Unicode replacement character `U+FFFD`.
 
-### Redundant Ban/Deletion Events
+### Redundant Ban and Deletion Events
 
-Bans/deletions from multiple moderators for the same person/chat will be logged separately. For simplicity, you can safely ignore all but the first line recorded in time order.
+Bans and deletions from multiple moderators for the same person or chat will be logged separately. For simplicity, you can safely ignore all but the first line recorded in time order.
 
 ## Provenance
 
 - **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net), including Hololive, Nijisanji, 774inc, etc)
-- **Temporal Coverage (UTC):**
-  - Chats: from 2021-03-14
-  - Superchats: from 2021-03-16
-  - Legacy Chats: from 2021-01-16
+- **Temporal Coverage:**
+  - Chats: from 2021-01-15T05:15:33Z
+  - Superchats: from 2021-03-16T08:19:38Z
 - **Tool:** [Honeybee](https://github.com/holodata/honeybee)
 
 ## Research Ideas
@@ -137,7 +159,7 @@ Bans/deletions from multiple moderators for the same person/chat will be logged 
 - Toxic Chat Classification
 - Spam Detection
 - Demographic Visualization
-- Sentence Encoder
+- Sentence Encoder for Short and Multi-lingual Messages
 
 ## Citation
 
@@ -147,7 +169,7 @@ Bans/deletions from multiple moderators for the same person/chat will be logged 
  title={Vtuber 100M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={19},
+ version={20},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```
