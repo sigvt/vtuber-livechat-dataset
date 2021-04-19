@@ -2,7 +2,7 @@ import requests
 import csv
 from os.path import join, dirname
 
-DATA_DIR = join(dirname(__file__), '..', 'data')
+DATA_DIR = join(dirname(__file__), '..', 'datasets', 'vtuber-livechat')
 
 # https://vlueprint.org/
 

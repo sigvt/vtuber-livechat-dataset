@@ -6,15 +6,46 @@ Huge collection of hundreds of millions of chat messages and moderation events (
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
+## Provenance
+
+- **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net), including Hololive, Nijisanji, 774inc, etc)
+- **Temporal Coverage:**
+  - Chats: from 2021-01-15T05:15:33Z
+  - Superchats: from 2021-03-16T08:19:38Z
+- **Tool:** [Honeybee](https://github.com/holodata/honeybee)
+
+## Research Ideas
+
+- Toxic Chat Classification
+- Spam Detection
+- Demographic Visualization
+- Sentence Encoder for Short and Multi-lingual Messages
+
+See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
+
+## Consideration
+
+### Anonymization
+
+`id` and `channelId` are anonymized by SHA-1 hashing algorithm with a pinch of undisclosed salt.
+
+### Handling Custom Emojis
+
+All custom emojis are replaced with a Unicode replacement character `U+FFFD`.
+
+### Redundant Ban and Deletion Events
+
+Bans and deletions from multiple moderators for the same person or chat will be logged separately. For simplicity, you can safely ignore all but the first line recorded in time order.
+
 ## Format
 
-| filename                   | summary                           | size    |
-| -------------------------- | --------------------------------- | ------- |
-| `chats_:year:-:month:.csv` | Live chat messages (120,000,000+) | ~21 GiB |
-| `superchats.csv`           | Super chat messages (230,000+)    | ~50 MiB |
-| `deletion_events.csv`      | Deletion events                   | ~40 MiB |
-| `ban_events.csv`           | Ban events                        | ~10 MiB |
-| `channels.csv`             | Channel index                     | 40 KiB  |
+| filename                        | summary                           | size    |
+| ------------------------------- | --------------------------------- | ------- |
+| `chats_:year:-:month:.csv`      | Live chat messages (120,000,000+) | ~21 GiB |
+| `superchats_:year:-:month:.csv` | Super chat messages (300,000+)    | ~50 MiB |
+| `deletion_events.csv`           | Deletion events                   | ~40 MiB |
+| `ban_events.csv`                | Ban events                        | ~10 MiB |
+| `channels.csv`                  | Channel index                     | 40 KiB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
@@ -52,10 +83,14 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 Set `keep_default_na` to `False` and `na_values` to `''` in `read_csv`. Otherwise, chat message like `NA` would incorrectly be treated as NaN value.
 
 ```python
-chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv', na_values='', keep_default_na=False)
+chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv',
+                    na_values='',
+                    keep_default_na=False,
+                    index_col='timestamp',
+                    parse_dates=True)
 ```
 
-### Superchats (`superchats.csv`)
+### Superchats (`chats_:year:-:month:.csv`)
 
 | column            | type            | description                  |
 | ----------------- | --------------- | ---------------------------- |
@@ -84,6 +119,26 @@ chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv', na_values='', keep_d
 | magenta   | 6            | ¥ 5000 - 9999       | $ 50.00 - 99.99     | 250                 |
 | red       | 7            | ¥ 10000 - 50000     | $ 100.00 - 500.00   | 270 - 350           |
 
+#### Pandas usage
+
+Set `keep_default_na` to `False` and `na_values` to `''` in `read_csv`. Otherwise, chat message like `NA` would incorrectly be treated as NaN value.
+
+```python
+import pandas as pd
+from glob import iglob
+
+sc = pd.concat([
+    pd.read_csv(f,
+                na_values='',
+                keep_default_na=False,
+                index_col='timestamp',
+                parse_dates=True)
+    for f in iglob('../vtuber-livechat/superchats_*.csv')
+],
+               ignore_index=False)
+sc.sort_index(inplace=True)
+```
+
 ### Deletion Events (`deletion_events.csv`)
 
 | column          | type    | description                  |
@@ -99,8 +154,11 @@ chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv', na_values='', keep_d
 Insert `deleted_by_mod` column to `chats` DataFrame:
 
 ```python
-chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv', na_values='', keep_default_na=False)
-delet = pd.read_csv('../vtuber-livechat/deletion_events.csv', usecols=['id', 'retracted'])
+chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv',
+                    na_values='',
+                    keep_default_na=False)
+delet = pd.read_csv('../vtuber-livechat/deletion_events.csv',
+                    usecols=['id', 'retracted'])
 
 delet = delet[delet['retracted'] == 0]
 
@@ -132,34 +190,21 @@ Here **Ban** means either to place user in time out or to permanently hide the u
 | subscriptionCount | string          | subscription count     |
 | videoCount        | string          | uploads count          |
 
-## Consideration
+#### Pandas usage
 
-### Anonymization
+Insert `banned` column to `chats` DataFrame:
 
-`id` and `channelId` are anonymized by SHA-1 hashing algorithm with a pinch of undisclosed salt.
+```python
+chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv',
+                    na_values='',
+                    keep_default_na=False)
+ban = pd.read_csv('../input/vtuber-livechat/ban_events.csv',
+                  usecols=['channelId', 'originVideoId'])
 
-### Handling Custom Emojis
-
-All custom emojis are replaced with a Unicode replacement character `U+FFFD`.
-
-### Redundant Ban and Deletion Events
-
-Bans and deletions from multiple moderators for the same person or chat will be logged separately. For simplicity, you can safely ignore all but the first line recorded in time order.
-
-## Provenance
-
-- **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net), including Hololive, Nijisanji, 774inc, etc)
-- **Temporal Coverage:**
-  - Chats: from 2021-01-15T05:15:33Z
-  - Superchats: from 2021-03-16T08:19:38Z
-- **Tool:** [Honeybee](https://github.com/holodata/honeybee)
-
-## Research Ideas
-
-- Toxic Chat Classification
-- Spam Detection
-- Demographic Visualization
-- Sentence Encoder for Short and Multi-lingual Messages
+ban['banned'] = True
+chats = pd.merge(chats, ban, on=['channelId', 'originVideoId'], how='left')
+chats['banned'].fillna(False, inplace=True)
+```
 
 ## Citation
 

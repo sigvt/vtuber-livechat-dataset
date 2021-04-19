@@ -2,6 +2,7 @@
 .env
 .vscode
 
+*.ipynb
 *.tar.gz
 *.csv
 

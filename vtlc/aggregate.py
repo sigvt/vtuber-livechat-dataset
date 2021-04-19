@@ -12,7 +12,7 @@ from dateutil.relativedelta import relativedelta
 
 ANONYMIZATION_SALT = os.environ.get('ANONYMIZATION_SALT')
 MONGODB_URI = os.environ.get('MONGODB_URI')
-DATA_DIR = join(dirname(__file__), '..', 'data')
+DATA_DIR = join(dirname(__file__), '..', 'datasets/vtuber-livechat')
 
 superchatColors = {
     '4279592384': 'blue',
@@ -75,24 +75,7 @@ def accumulateChat(col, recentOnly=False):
 
     channels = pd.read_csv(join(DATA_DIR, 'channels.csv')).fillna("")
 
-    superchatFp = open(join(DATA_DIR, 'superchats.csv'), 'w', encoding='UTF8')
-    superchatWriter = csv.writer(superchatFp)
-    superchatWriter.writerow([
-        'timestamp',
-        'amount',
-        'currency',
-        'significance',
-        'color',
-        'body',
-        'id',
-        'channelId',
-        'originVideoId',
-        'originChannel',
-        'originAffiliation',
-        'originGroup',
-    ])
-
-    def handleCursor(cursor, filename):
+    def handleCursor(cursor, filename, sc_filename):
         chatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
         chatWriter = csv.writer(chatFp)
         chatWriter.writerow([
@@ -105,6 +88,23 @@ def accumulateChat(col, recentOnly=False):
             'channelId',
             'originVideoId',
             'originChannelId',
+        ])
+
+        superchatFp = open(join(DATA_DIR, sc_filename), 'w', encoding='UTF8')
+        superchatWriter = csv.writer(superchatFp)
+        superchatWriter.writerow([
+            'timestamp',
+            'amount',
+            'currency',
+            'significance',
+            'color',
+            'body',
+            'id',
+            'channelId',
+            'originVideoId',
+            'originChannel',
+            'originAffiliation',
+            'originGroup',
         ])
 
         for doc in cursor:
@@ -191,9 +191,11 @@ def accumulateChat(col, recentOnly=False):
             ])
 
         chatFp.close()
+        superchatFp.close()
 
     if recentOnly:
-        recent = datetime.utcnow() + relativedelta(months=-1)
+        #recent = datetime.utcnow() + relativedelta(months=-1)
+        recent = datetime.utcnow()
         cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
     else:
         cm = genesisEpoch
@@ -201,15 +203,16 @@ def accumulateChat(col, recentOnly=False):
     while cm < datetime.utcnow().replace(tzinfo=timezone.utc):
         nm = cm + relativedelta(months=+1)
         nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
-        print('cm', cm)
-        print('nm', nm)
         filename = f'chats_{cm.strftime("%Y-%m")}.csv'
-        cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
-        # do whatever
-        handleCursor(cursor, filename)
-        cm = nm
+        sc_filename = f'superchats_{cm.strftime("%Y-%m")}.csv'
+        print('data range:', cm, '<= X <', nm)
+        print('target:', filename, 'and', sc_filename)
 
-    superchatFp.close()
+        cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
+        handleCursor(cursor, filename, sc_filename)
+
+        # update start epoch
+        cm = nm
 
 
 def accumulateBan(col):
@@ -285,6 +288,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
     parser.add_argument('-R', '--recent-only', action='store_true')
     args = parser.parse_args()
+
+    print('set base dir to', DATA_DIR)
 
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
