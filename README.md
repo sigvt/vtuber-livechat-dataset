@@ -39,17 +39,31 @@ Bans and deletions from multiple moderators for the same person or chat will be 
 
 ## Format
 
-| filename                        | summary                           | size    |
-| ------------------------------- | --------------------------------- | ------- |
-| `chats_:year:-:month:.csv`      | Live chat messages (120,000,000+) | ~21 GiB |
-| `superchats_:year:-:month:.csv` | Super chat messages (300,000+)    | ~50 MiB |
-| `deletion_events.csv`           | Deletion events                   | ~40 MiB |
-| `ban_events.csv`                | Ban events                        | ~10 MiB |
-| `channels.csv`                  | Channel index                     | 40 KiB  |
+| filename                        | summary                                        | size    |
+| ------------------------------- | ---------------------------------------------- | ------- |
+| `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MiB |
+| `chats_:year:-:month:.csv`      | Live chat messages (150,000,000+)              | ~26 GiB |
+| `superchat_stats.csv`           | Statistics for super chats                     | < 1 MiB |
+| `superchats_:year:-:month:.csv` | Super chat messages (350,000+)                 | ~80 MiB |
+| `deletion_events.csv`           | Deletion events                                | ~50 MiB |
+| `ban_events.csv`                | Ban events                                     | ~12 MiB |
+| `channels.csv`                  | Channel index                                  | < 1 MiB |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
+
+### Chat Statistics (`chat_stats.csv`)
+
+| column        | type   | description                                     |
+| ------------- | ------ | ----------------------------------------------- |
+| channelId     | string | channel id                                      |
+| period        | string | interested period (%Y-%M)                       |
+| chatCount     | number | number of chats                                 |
+| chatNunique   | number | number of unique users                          |
+| banCount      | number | number of ban events                            |
+| banNunique    | number | number of unique users marked as banned by mods |
+| deletionCount | number | number of chats deleted by mods                 |
 
 ### Chats (`chats_:year:-:month:.csv`)
 
@@ -62,8 +76,8 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 | isVerified      | boolean | is verified account          |
 | id              | string  | anonymized chat id           |
 | channelId       | string  | anonymized author channel id |
-| originVideoId   | string  | origin video id              |
-| originChannelId | string  | origin channel id            |
+| originVideoId   | string  | source video id              |
+| originChannelId | string  | source channel id            |
 
 #### Membership status
 
@@ -83,29 +97,38 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 Set `keep_default_na` to `False` and `na_values` to `''` in `read_csv`. Otherwise, chat message like `NA` would incorrectly be treated as NaN value.
 
 ```python
-chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv',
+chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
                     na_values='',
                     keep_default_na=False,
                     index_col='timestamp',
                     parse_dates=True)
 ```
 
+### Super Chat Statistics (`superchat_stats.csv`)
+
+| column     | type   | description                        |
+| ---------- | ------ | ---------------------------------- |
+| channelId  | string | channel id                         |
+| period     | string | interested period (%Y-%M)          |
+| scCount    | number | number of super chats              |
+| scNunique  | number | number of unique users             |
+| scTotalJPY | number | total amount of super chats (JPY)  |
+| scMeanJPY  | number | average amount of super chat (JPY) |
+
 ### Superchats (`chats_:year:-:month:.csv`)
 
-| column            | type            | description                  |
-| ----------------- | --------------- | ---------------------------- |
-| timestamp         | string          | UTC timestamp                |
-| amount            | number          | purchased amount             |
-| currency          | string          | currency symbol              |
-| significance      | number          | significance                 |
-| color             | string          | color                        |
-| body              | nullable string | chat message                 |
-| id                | string          | anonymized chat id           |
-| channelId         | string          | anonymized author channel id |
-| originVideoId     | string          | origin video id              |
-| originChannel     | string          | origin channel name          |
-| originAffiliation | string          | origin affiliation           |
-| originGroup       | string          | origin group                 |
+| column          | type            | description                  |
+| --------------- | --------------- | ---------------------------- |
+| timestamp       | string          | UTC timestamp                |
+| amount          | number          | purchased amount             |
+| currency        | string          | currency symbol              |
+| significance    | number          | significance                 |
+| color           | string          | color                        |
+| body            | nullable string | chat message                 |
+| id              | string          | anonymized chat id           |
+| channelId       | string          | anonymized author channel id |
+| originVideoId   | string          | source video id              |
+| originChannelId | string          | source channel id            |
 
 #### Color and Significance
 
@@ -133,7 +156,7 @@ sc = pd.concat([
                 keep_default_na=False,
                 index_col='timestamp',
                 parse_dates=True)
-    for f in iglob('../vtuber-livechat/superchats_*.csv')
+    for f in iglob('../input/vtuber-livechat/superchats_*.csv')
 ],
                ignore_index=False)
 sc.sort_index(inplace=True)
@@ -146,18 +169,18 @@ sc.sort_index(inplace=True)
 | timestamp       | string  | UTC timestamp                |
 | id              | string  | anonymized chat id           |
 | retracted       | boolean | is deleted by author oneself |
-| originVideoId   | string  | origin video id              |
-| originChannelId | string  | origin channel id            |
+| originVideoId   | string  | source video id              |
+| originChannelId | string  | source channel id            |
 
 #### Pandas usage
 
 Insert `deleted_by_mod` column to `chats` DataFrame:
 
 ```python
-chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv',
+chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
                     na_values='',
                     keep_default_na=False)
-delet = pd.read_csv('../vtuber-livechat/deletion_events.csv',
+delet = pd.read_csv('../input/vtuber-livechat/deletion_events.csv',
                     usecols=['id', 'retracted'])
 
 delet = delet[delet['retracted'] == 0]
@@ -175,27 +198,15 @@ Here **Ban** means either to place user in time out or to permanently hide the u
 | --------------- | ------ | --------------------- |
 | timestamp       | string | UTC timestamp         |
 | channelId       | string | anonymized channel id |
-| originVideoId   | string | origin video id       |
-| originChannelId | string | origin channel id     |
-
-### Channels (`channels.csv`)
-
-| column            | type            | description            |
-| ----------------- | --------------- | ---------------------- |
-| channelId         | string          | channel id             |
-| name              | string          | channel name           |
-| name.en           | nullable string | channel name (English) |
-| affiliation       | string          | channel affiliation    |
-| group             | nullable string | group                  |
-| subscriptionCount | string          | subscription count     |
-| videoCount        | string          | uploads count          |
+| originVideoId   | string | source video id       |
+| originChannelId | string | source channel id     |
 
 #### Pandas usage
 
 Insert `banned` column to `chats` DataFrame:
 
 ```python
-chats = pd.read_csv('../vtuber-livechat/chats_2021-03.csv',
+chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
                     na_values='',
                     keep_default_na=False)
 ban = pd.read_csv('../input/vtuber-livechat/ban_events.csv',
@@ -206,6 +217,18 @@ chats = pd.merge(chats, ban, on=['channelId', 'originVideoId'], how='left')
 chats['banned'].fillna(False, inplace=True)
 ```
 
+### Channels (`channels.csv`)
+
+| column            | type            | description            |
+| ----------------- | --------------- | ---------------------- |
+| channelId         | string          | channel id             |
+| name              | string          | channel name           |
+| name.en           | nullable string | channel name (English) |
+| affiliation       | string          | channel affiliation    |
+| group             | nullable string | group                  |
+| subscriptionCount | number          | subscription count     |
+| videoCount        | number          | uploads count          |
+
 ## Citation
 
 ```latex
@@ -214,7 +237,7 @@ chats['banned'].fillna(False, inplace=True)
  title={Vtuber 100M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={20},
+ version={23},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```

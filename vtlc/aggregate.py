@@ -73,8 +73,6 @@ def accumulateChat(col, recentOnly=False):
     if recentOnly:
         print('Only process recent history')
 
-    channels = pd.read_csv(join(DATA_DIR, 'channels.csv')).fillna("")
-
     def handleCursor(cursor, filename, sc_filename):
         chatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
         chatWriter = csv.writer(chatFp)
@@ -102,9 +100,7 @@ def accumulateChat(col, recentOnly=False):
             'id',
             'channelId',
             'originVideoId',
-            'originChannel',
-            'originAffiliation',
-            'originGroup',
+            'originChannelId',
         ])
 
         for doc in cursor:
@@ -136,12 +132,6 @@ def accumulateChat(col, recentOnly=False):
 
                     significance = superchatSignificance[bgcolor]
 
-                    origin = channels[channels['channelId'] ==
-                                      originChannelId].iloc[0]
-                    originChannel = origin['name.en'] or origin['name']
-                    originAffiliation = origin['affiliation']
-                    originGroup = origin['group']
-
                     superchatWriter.writerow([
                         timestamp.isoformat(),
                         amount,
@@ -152,9 +142,7 @@ def accumulateChat(col, recentOnly=False):
                         id,
                         channelId,
                         originVideoId,
-                        originChannel,
-                        originAffiliation,
-                        originGroup,
+                        originChannelId,
                     ])
 
                 continue
@@ -194,8 +182,8 @@ def accumulateChat(col, recentOnly=False):
         superchatFp.close()
 
     if recentOnly:
-        #recent = datetime.utcnow() + relativedelta(months=-1)
-        recent = datetime.utcnow()
+        recent = datetime.utcnow() + relativedelta(months=-1)
+        # recent = datetime.utcnow()
         cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
     else:
         cm = genesisEpoch
