@@ -67,11 +67,11 @@ def convertRawMessageToString(rawMessage):
     return "".join([handler(run) for run in rawMessage])
 
 
-def accumulateChat(col, recentOnly=False):
+def accumulateChat(col, recent=-1):
     print('# of chats', col.estimated_document_count())
 
-    if recentOnly:
-        print('Only process recent history')
+    if recent >= 0:
+        print(f'process chats past {recent} month(s)')
 
     def handleCursor(cursor, filename, sc_filename):
         chatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
@@ -181,9 +181,8 @@ def accumulateChat(col, recentOnly=False):
         chatFp.close()
         superchatFp.close()
 
-    if recentOnly:
-        recent = datetime.utcnow() + relativedelta(months=-1)
-        # recent = datetime.utcnow()
+    if recent >= 0:
+        recent = datetime.utcnow() + relativedelta(months=recent)
         cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
     else:
         cm = genesisEpoch
@@ -274,14 +273,13 @@ def accumulateDeletion(col):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
-    parser.add_argument('-R', '--recent-only', action='store_true')
+    parser.add_argument('-R', '--recent', type=int, default=-1)
     args = parser.parse_args()
-
     print('set base dir to', DATA_DIR)
 
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
 
-    accumulateChat(db.chats, recentOnly=args.recent_only)
+    accumulateChat(db.chats, recent=args.recent)
     accumulateBan(db.banactions)
     accumulateDeletion(db.deleteactions)
