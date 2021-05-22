@@ -1,6 +1,6 @@
 ![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
 
-# Vtuber 100M: Live Chat and Moderation Events
+# Vtuber 200M: Live Chat and Moderation Events
 
 Huge collection of hundreds of millions of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
@@ -41,13 +41,13 @@ Bans and deletions from multiple moderators for the same person or chat will be 
 
 | filename                        | summary                                        | size    |
 | ------------------------------- | ---------------------------------------------- | ------- |
-| `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MiB |
-| `chats_:year:-:month:.csv`      | Live chat messages (150,000,000+)              | ~26 GiB |
-| `superchat_stats.csv`           | Statistics for super chats                     | < 1 MiB |
-| `superchats_:year:-:month:.csv` | Super chat messages (350,000+)                 | ~80 MiB |
-| `deletion_events.csv`           | Deletion events                                | ~50 MiB |
-| `ban_events.csv`                | Ban events                                     | ~12 MiB |
-| `channels.csv`                  | Channel index                                  | < 1 MiB |
+| `chats_:year:-:month:.csv`      | Live chat messages (200,000,000+)              | ~36 GB  |
+| `superchats_:year:-:month:.csv` | Super chat messages (500,000+)                 | ~130 MB |
+| `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB  |
+| `superchat_stats.csv`           | Statistics for super chats                     | < 1 MB  |
+| `deletion_events.csv`           | Deletion events                                | ~70 MB  |
+| `ban_events.csv`                | Ban events                                     | ~13 MB  |
+| `channels.csv`                  | Channel index                                  | < 1 MB  |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
@@ -234,10 +234,10 @@ chats['banned'].fillna(False, inplace=True)
 ```latex
 @misc{vtuber-livechat-dataset,
  author={Yasuaki Uechi},
- title={Vtuber 100M: Large Scale Virtual YouTubers Live Chat Dataset},
+ title={Vtuber 200M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={23},
+ version={26},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```
