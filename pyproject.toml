@@ -8,11 +8,10 @@ authors = ["Yasuaki Uechi <y@uechi.io>"]
 python = "^3.9"
 kaggle = "^1.5.12"
 numpy = "^1.20.1"
-matplotlib = "^3.3.4"
+matplotlib = "^3.4.2"
 pandas = "^1.2.3"
 pymongo = "^3.11.3"
-streamlit = "^0.78.0"
-fsspec = "^0.8.7"
+streamlit = "^0.82.0"
 plotly = "^4.14.3"
 python-dateutil = "^2.8.1"
 
