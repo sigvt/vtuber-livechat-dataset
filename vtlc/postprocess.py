@@ -4,33 +4,7 @@ from glob import iglob
 
 DATA_DIR = join(dirname(__file__), '..', 'datasets', 'vtuber-livechat')
 
-delet = pd.read_csv(join(DATA_DIR, 'deletion_events.csv'),
-                    index_col='timestamp',
-                    parse_dates=True)
-delet = delet.query('retracted == 0')
-delet['period'] = delet.index.to_period('M')
-delet = delet.groupby(['originChannelId', 'period'
-                      ])['id'].nunique().rename('deletionCount').reset_index()
-delet.rename(columns={'originChannelId': 'channelId'}, inplace=True)
-delet.info()
-
-ban = pd.read_csv(join(DATA_DIR, 'ban_events.csv'),
-                  index_col='timestamp',
-                  parse_dates=True)
-ban['period'] = ban.index.to_period('M')
-ban = ban.groupby(['originChannelId',
-                   'period']).agg({'channelId': ['size', 'nunique']})
-ban.columns = ['_'.join(col) for col in ban.columns.values]
-ban.reset_index(inplace=True)
-ban.rename(columns={
-    'channelId_size': 'banCount',
-    'channelId_nunique': 'banNunique',
-    'originChannelId': 'channelId'
-},
-           inplace=True)
-ban.info()
-
-symMap = {
+CURRENCY_SYMBOL_MAP = {
     '$': 'USD',
     '£': 'GBP',
     '¥': 'JPY',
@@ -85,7 +59,7 @@ symMap = {
     'ZAR': 'ZAR',
 }
 
-approxRates = {
+APPROX_RATES_TO_JPY = {
     'AED': 0.03,
     'ARS': 1.26136,
     'AUD': 0.0127098151,
@@ -136,6 +110,35 @@ approxRates = {
     'UYU': 0.41,
     'ZAR': 0.13,
 }
+
+
+def load_moderations():
+    delet = pd.read_csv(join(DATA_DIR, 'deletion_events.csv'),
+                        index_col='timestamp',
+                        parse_dates=True)
+    delet = delet.query('retracted == 0')
+    delet['period'] = delet.index.to_period('M')
+    delet = delet.groupby(
+        ['originChannelId',
+         'period'])['id'].nunique().rename('deletionCount').reset_index()
+    delet.rename(columns={'originChannelId': 'channelId'}, inplace=True)
+    delet.info()
+
+    ban = pd.read_csv(join(DATA_DIR, 'ban_events.csv'),
+                      index_col='timestamp',
+                      parse_dates=True)
+    ban['period'] = ban.index.to_period('M')
+    ban = ban.groupby(['originChannelId',
+                       'period']).agg({'channelId': ['size', 'nunique']})
+    ban.columns = ['_'.join(col) for col in ban.columns.values]
+    ban.reset_index(inplace=True)
+    ban.rename(columns={
+        'channelId_size': 'banCount',
+        'channelId_nunique': 'banNunique',
+        'originChannelId': 'channelId'
+    },
+               inplace=True)
+    ban.info()
 
 
 def handleChats():
@@ -203,8 +206,9 @@ def handleSuperChats():
                              'amount', 'currency'
                          ])
 
-        sc['amountJPY'] = sc.apply(
-            lambda x: x['amount'] / approxRates[symMap[x['currency']]], axis=1)
+        sc['amountJPY'] = sc.apply(lambda x: x['amount'] / APPROX_RATES_TO_JPY[
+            CURRENCY_SYMBOL_MAP[x['currency']]],
+                                   axis=1)
 
         stat = sc.groupby('originChannelId').agg({
             'channelId': ['size', 'nunique'],

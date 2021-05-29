@@ -1,6 +1,7 @@
 .envrc
 .env
 .vscode
+/tmp
 
 *.ipynb
 *.tar.gz

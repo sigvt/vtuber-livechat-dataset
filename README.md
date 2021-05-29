@@ -19,51 +19,25 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 - Toxic Chat Classification
 - Spam Detection
 - Demographic Visualization
-- Sentence Encoder for Short and Multi-lingual Messages
+- Sentence Encoder for Live Chat
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
 
-## Consideration
+## Dataset Breakdown
 
-### Anonymization
-
-`id` and `channelId` are anonymized by SHA-1 hashing algorithm with a pinch of undisclosed salt.
-
-### Handling Custom Emojis
-
-All custom emojis are replaced with a Unicode replacement character `U+FFFD`.
-
-### Redundant Ban and Deletion Events
-
-Bans and deletions from multiple moderators for the same person or chat will be logged separately. For simplicity, you can safely ignore all but the first line recorded in time order.
-
-## Format
-
-| filename                        | summary                                        | size    |
-| ------------------------------- | ---------------------------------------------- | ------- |
-| `chats_:year:-:month:.csv`      | Live chat messages (200,000,000+)              | ~36 GB  |
-| `superchats_:year:-:month:.csv` | Super chat messages (500,000+)                 | ~130 MB |
-| `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB  |
-| `superchat_stats.csv`           | Statistics for super chats                     | < 1 MB  |
-| `deletion_events.csv`           | Deletion events                                | ~70 MB  |
-| `ban_events.csv`                | Ban events                                     | ~13 MB  |
-| `channels.csv`                  | Channel index                                  | < 1 MB  |
+| filename                        | summary                                        | size     |
+| ------------------------------- | ---------------------------------------------- | -------- |
+| `chats_:year:-:month:.csv`      | Live chat messages (220,000,000+)              | ~ 40 GB  |
+| `superchats_:year:-:month:.csv` | Super chat messages (600,000+)                 | ~ 150 MB |
+| `deletion_events.csv`           | Deletion events                                | ~ 72 MB  |
+| `ban_events.csv`                | Ban events                                     | ~ 14 MB  |
+| `channels.csv`                  | Channel index                                  | < 1 MB   |
+| `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB   |
+| `superchat_stats.csv`           | Statistics for super chats                     | < 1 MB   |
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
-
-### Chat Statistics (`chat_stats.csv`)
-
-| column        | type   | description                                     |
-| ------------- | ------ | ----------------------------------------------- |
-| channelId     | string | channel id                                      |
-| period        | string | interested period (%Y-%M)                       |
-| chatCount     | number | number of chats                                 |
-| chatNunique   | number | number of unique users                          |
-| banCount      | number | number of ban events                            |
-| banNunique    | number | number of unique users marked as banned by mods |
-| deletionCount | number | number of chats deleted by mods                 |
 
 ### Chats (`chats_:year:-:month:.csv`)
 
@@ -104,17 +78,6 @@ chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
                     parse_dates=True)
 ```
 
-### Super Chat Statistics (`superchat_stats.csv`)
-
-| column     | type   | description                        |
-| ---------- | ------ | ---------------------------------- |
-| channelId  | string | channel id                         |
-| period     | string | interested period (%Y-%M)          |
-| scCount    | number | number of super chats              |
-| scNunique  | number | number of unique users             |
-| scTotalJPY | number | total amount of super chats (JPY)  |
-| scMeanJPY  | number | average amount of super chat (JPY) |
-
 ### Superchats (`chats_:year:-:month:.csv`)
 
 | column          | type            | description                  |
@@ -122,8 +85,8 @@ chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
 | timestamp       | string          | UTC timestamp                |
 | amount          | number          | purchased amount             |
 | currency        | string          | currency symbol              |
-| significance    | number          | significance                 |
 | color           | string          | color                        |
+| significance    | number          | significance                 |
 | body            | nullable string | chat message                 |
 | id              | string          | anonymized chat id           |
 | channelId       | string          | anonymized author channel id |
@@ -229,6 +192,43 @@ chats['banned'].fillna(False, inplace=True)
 | subscriptionCount | number          | subscription count     |
 | videoCount        | number          | uploads count          |
 
+### Chat Statistics (`chat_stats.csv`)
+
+| column        | type   | description                                     |
+| ------------- | ------ | ----------------------------------------------- |
+| channelId     | string | channel id                                      |
+| period        | string | interested period (%Y-%M)                       |
+| chatCount     | number | number of chats                                 |
+| chatNunique   | number | number of unique users                          |
+| banCount      | number | number of ban events                            |
+| banNunique    | number | number of unique users marked as banned by mods |
+| deletionCount | number | number of chats deleted by mods                 |
+
+### Super Chat Statistics (`superchat_stats.csv`)
+
+| column     | type   | description                        |
+| ---------- | ------ | ---------------------------------- |
+| channelId  | string | channel id                         |
+| period     | string | interested period (%Y-%M)          |
+| scCount    | number | number of super chats              |
+| scNunique  | number | number of unique users             |
+| scTotalJPY | number | total amount of super chats (JPY)  |
+| scMeanJPY  | number | average amount of super chat (JPY) |
+
+## Consideration
+
+### Anonymization
+
+`id` and `channelId` are anonymized by SHA-1 hashing algorithm with a pinch of undisclosed salt.
+
+### Handling Custom Emojis
+
+All custom emojis are replaced with a Unicode replacement character `U+FFFD`.
+
+### Redundant Ban and Deletion Events
+
+Bans and deletions from multiple moderators for the same person or chat will be logged separately. For simplicity, you can safely ignore all but the first line recorded in time order.
+
 ## Citation
 
 ```latex
@@ -237,7 +237,7 @@ chats['banned'].fillna(False, inplace=True)
  title={Vtuber 200M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={26},
+ version={27},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```
