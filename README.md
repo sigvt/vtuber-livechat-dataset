@@ -2,7 +2,7 @@
 
 # Vtuber 200M: Live Chat and Moderation Events
 
-Huge collection of hundreds of millions of chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
+Huge collection of hundreds of millions of live chat and super chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
@@ -12,6 +12,8 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 - **Temporal Coverage:**
   - Chats: from 2021-01-15T05:15:33Z
   - Superchats: from 2021-03-16T08:19:38Z
+- **Update Frequency:**
+  - At least once per month
 - **Tool:** [Honeybee](https://github.com/holodata/honeybee)
 
 ## Research Ideas
@@ -19,7 +21,8 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 - Toxic Chat Classification
 - Spam Detection
 - Demographic Visualization
-- Sentence Encoder for Live Chat
+- Superchat Analysis
+- Sentence Transformer for Live Chat
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
 
@@ -237,7 +240,7 @@ Bans and deletions from multiple moderators for the same person or chat will be 
  title={Vtuber 200M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={27},
+ version={28},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```

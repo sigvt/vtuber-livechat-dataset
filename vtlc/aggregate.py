@@ -67,11 +67,13 @@ def convertRawMessageToString(rawMessage):
     return "".join([handler(run) for run in rawMessage])
 
 
-def accumulateChat(col, recent=-1):
+def accumulateChat(col, recent=-1, ignoreHalfway=False):
     print('# of chats', col.estimated_document_count())
 
     if recent >= 0:
-        print(f'process chats past {recent} month(s)')
+        print(f'Processing chats past {recent} month(s)')
+    if ignoreHalfway:
+        print('While ignoring this month')
 
     def handleCursor(cursor, filename, sc_filename):
         chatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
@@ -181,13 +183,17 @@ def accumulateChat(col, recent=-1):
         chatFp.close()
         superchatFp.close()
 
+    now = datetime.utcnow().replace(tzinfo=timezone.utc)
+
     if recent >= 0:
-        recent = datetime.utcnow() + relativedelta(months=recent)
+        recent = now + relativedelta(months=-recent)
         cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
     else:
         cm = genesisEpoch
 
-    while cm < datetime.utcnow().replace(tzinfo=timezone.utc):
+    untilDate = now + relativedelta(months=-1 if ignoreHalfway else 0)
+
+    while cm < untilDate:
         nm = cm + relativedelta(months=+1)
         nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
         filename = f'chats_{cm.strftime("%Y-%m")}.csv'
@@ -273,13 +279,16 @@ def accumulateDeletion(col):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
-    parser.add_argument('-R', '--recent', type=int, default=-1)
+    parser.add_argument('-R', '--recent', type=int, default=1)
+    parser.add_argument('-I', '--ignore-halfway', action='store_true')
     args = parser.parse_args()
     print('set base dir to', DATA_DIR)
 
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
 
-    accumulateChat(db.chats, recent=args.recent)
+    accumulateChat(db.chats,
+                   recent=args.recent,
+                   ignoreHalfway=args.ignore_halfway)
     accumulateBan(db.banactions)
     accumulateDeletion(db.deleteactions)
