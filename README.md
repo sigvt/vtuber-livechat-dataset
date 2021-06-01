@@ -30,10 +30,10 @@ See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datase
 
 | filename                        | summary                                        | size     |
 | ------------------------------- | ---------------------------------------------- | -------- |
-| `chats_:year:-:month:.csv`      | Live chat messages (220,000,000+)              | ~ 40 GB  |
-| `superchats_:year:-:month:.csv` | Super chat messages (600,000+)                 | ~ 150 MB |
-| `deletion_events.csv`           | Deletion events                                | ~ 72 MB  |
-| `ban_events.csv`                | Ban events                                     | ~ 14 MB  |
+| `chats_:year:-:month:.csv`      | Live chat messages (230,000,000+)              | ~ 42 GB  |
+| `superchats_:year:-:month:.csv` | Super chat messages (700,000+)                 | ~ 160 MB |
+| `deletion_events.csv`           | Deletion events                                | ~ 75 MB  |
+| `ban_events.csv`                | Ban events                                     | ~ 15 MB  |
 | `channels.csv`                  | Channel index                                  | < 1 MB   |
 | `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB   |
 | `superchat_stats.csv`           | Statistics for super chats                     | < 1 MB   |
