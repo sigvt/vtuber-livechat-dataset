@@ -1,5 +1,7 @@
 all: build upload
 
+build: preprocess aggregate postprocess
+
 preprocess:
 	python3 -m vtlc.preprocess
 
@@ -9,8 +11,6 @@ aggregate:
 
 postprocess:
 	python3 -m vtlc.postprocess
-
-build: preprocess aggregate postprocess
 
 upload:
 	kaggle datasets version -m "New version" --path datasets/vtuber-livechat

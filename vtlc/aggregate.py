@@ -96,8 +96,8 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             'timestamp',
             'amount',
             'currency',
-            'significance',
             'color',
+            'significance',
             'body',
             'id',
             'channelId',
@@ -110,38 +110,39 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
 
             # anonymize id and author channel id with grain of salt
-            id = hashlib.sha1(
+            chatId = hashlib.sha1(
                 (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
             channelId = hashlib.sha1((doc['authorChannelId'] +
                                       ANONYMIZATION_SALT).encode()).hexdigest()
 
-            text = convertRawMessageToString(doc['rawMessage'])
+            text = convertRawMessageToString(doc['message'] if 'message' in
+                                             doc else doc['rawMessage'])
 
             originVideoId = doc['originVideoId']
             originChannelId = doc['originChannelId']
 
             isSuperchat = 1 if 'purchase' in doc else 0
 
-            # handle superchat
+            # handle legacy superchat
             if isSuperchat:
                 isIncorrectSuperchat = timestamp < incorrectSuperchatEpoch
 
                 if not isIncorrectSuperchat:
                     amount = doc['purchase']['amount']
                     currency = doc['purchase']['currency']
-                    bgcolor = superchatColors[doc['purchase']
-                                              ['headerBackgroundColor']]
+                    color = superchatColors[doc['purchase']
+                                            ['headerBackgroundColor']]
 
-                    significance = superchatSignificance[bgcolor]
+                    significance = superchatSignificance[color]
 
                     superchatWriter.writerow([
                         timestamp.isoformat(),
                         amount,
                         currency,
+                        color,
                         significance,
-                        bgcolor,
                         text,
-                        id,
+                        chatId,
                         channelId,
                         originVideoId,
                         originChannelId,
@@ -174,7 +175,7 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
                 membership,
                 isModerator,
                 isVerified,
-                id,
+                chatId,
                 channelId,
                 originVideoId,
                 originChannelId,
@@ -203,6 +204,89 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
 
         cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
         handleCursor(cursor, filename, sc_filename)
+
+        # update start epoch
+        cm = nm
+
+
+def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
+    print('# of superchats', col.estimated_document_count())
+
+    if recent >= 0:
+        print(f'Processing chats past {recent} month(s)')
+    if ignoreHalfway:
+        print('While ignoring this month')
+
+    def handleCursor(cursor, filename):
+        # superchatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
+        superchatFp = open(join(DATA_DIR, filename), 'a', encoding='UTF8')
+        superchatWriter = csv.writer(superchatFp)
+        # superchatWriter.writerow([
+        #     'timestamp',
+        #     'amount',
+        #     'currency',
+        #     'color',
+        #     'significance',
+        #     'body',
+        #     'id',
+        #     'channelId',
+        #     'originVideoId',
+        #     'originChannelId',
+        # ])
+
+        for doc in cursor:
+            # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+            timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
+
+            # anonymize id and author channel id with grain of salt
+            chatId = hashlib.sha1(
+                (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
+            channelId = hashlib.sha1((doc['authorChannelId'] +
+                                      ANONYMIZATION_SALT).encode()).hexdigest()
+
+            text = convertRawMessageToString(doc['message'])
+
+            originVideoId = doc['originVideoId']
+            originChannelId = doc['originChannelId']
+            amount = doc['purchaseAmount']
+            currency = doc['currency']
+            color = doc['color']
+            significance = doc['significance']
+
+            superchatWriter.writerow([
+                timestamp.isoformat(),
+                amount,
+                currency,
+                color,
+                significance,
+                text,
+                chatId,
+                channelId,
+                originVideoId,
+                originChannelId,
+            ])
+
+        superchatFp.close()
+
+    now = datetime.utcnow().replace(tzinfo=timezone.utc)
+
+    if recent >= 0:
+        recent = now + relativedelta(months=-recent)
+        cm = datetime(recent.year, recent.month, 1, tzinfo=timezone.utc)
+    else:
+        cm = genesisEpoch
+
+    untilDate = now + relativedelta(months=-1 if ignoreHalfway else 0)
+
+    while cm < untilDate:
+        nm = cm + relativedelta(months=+1)
+        nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
+        filename = f'superchats_{cm.strftime("%Y-%m")}.csv'
+        print('data range:', cm, '<= X <', nm)
+        print('target:', filename)
+
+        cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
+        handleCursor(cursor, filename)
 
         # update start epoch
         cm = nm
@@ -258,7 +342,7 @@ def accumulateDeletion(col):
 
     for doc in cursor:
         # anonymize author channel id with grain of salt
-        id = hashlib.sha1(
+        chatId = hashlib.sha1(
             (doc['targetId'] + ANONYMIZATION_SALT).encode()).hexdigest()
         originVideoId = doc['originVideoId']
         originChannelId = doc['originChannelId']
@@ -268,7 +352,7 @@ def accumulateDeletion(col):
 
         writer.writerow([
             timestamp,
-            id,
+            chatId,
             retracted,
             originVideoId,
             originChannelId,
@@ -290,5 +374,8 @@ if __name__ == '__main__':
     accumulateChat(db.chats,
                    recent=args.recent,
                    ignoreHalfway=args.ignore_halfway)
+    accumulateSuperChat(db.superchats,
+                        recent=args.recent,
+                        ignoreHalfway=args.ignore_halfway)
     accumulateBan(db.banactions)
     accumulateDeletion(db.deleteactions)
