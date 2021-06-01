@@ -1,12 +1,10 @@
 import argparse
-import calendar
 import csv
 import hashlib
 import os
 from datetime import datetime, timezone
 from os.path import dirname, join
 
-import pandas as pd
 import pymongo
 from dateutil.relativedelta import relativedelta
 
