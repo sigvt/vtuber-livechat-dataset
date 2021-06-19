@@ -1,15 +1,17 @@
 from glob import iglob
-from os.path import basename, dirname, join, splitext
+from os import makedirs, environ
+from os.path import basename, join, splitext
 
 import pandas as pd
 
 from vtlc.util.currency import applyJPY
 
-DATA_DIR = join(dirname(__file__), '..', 'datasets', 'vtuber-livechat')
+DATASET_DIR = environ['DATASET_DIR']
+makedirs(DATASET_DIR, exist_ok=True)
 
 
 def load_moderations():
-    delet = pd.read_csv(join(DATA_DIR, 'deletion_events.csv'),
+    delet = pd.read_csv(join(DATASET_DIR, 'deletion_events.csv'),
                         index_col='timestamp',
                         parse_dates=True)
     delet = delet.query('retracted == 0')
@@ -20,7 +22,7 @@ def load_moderations():
     delet.rename(columns={'originChannelId': 'channelId'}, inplace=True)
     delet.info()
 
-    ban = pd.read_csv(join(DATA_DIR, 'ban_events.csv'),
+    ban = pd.read_csv(join(DATASET_DIR, 'ban_events.csv'),
                       index_col='timestamp',
                       parse_dates=True)
     ban['period'] = ban.index.to_period('M')
@@ -43,7 +45,7 @@ def handleChats():
 
     stat_all = pd.DataFrame()
 
-    for f in sorted(iglob(join(DATA_DIR, 'chats_*.csv'))):
+    for f in sorted(iglob(join(DATASET_DIR, 'chats_*.csv'))):
         print('Handling', splitext(basename(f))[0])
         chat = pd.read_csv(
             f, usecols=['timestamp', 'originChannelId', 'channelId'])
@@ -89,14 +91,14 @@ def handleChats():
 
     stat_all.info()
 
-    stat_all.to_csv(join(DATA_DIR, 'chat_stats.csv'), index=False)
+    stat_all.to_csv(join(DATASET_DIR, 'chat_stats.csv'), index=False)
 
 
 def handleSuperChats():
 
     stat_all = pd.DataFrame()
 
-    for f in sorted(iglob(join(DATA_DIR, 'superchats_*.csv'))):
+    for f in sorted(iglob(join(DATASET_DIR, 'superchats_*.csv'))):
         print('Handling', splitext(basename(f))[0])
         sc = pd.read_csv(f,
                          usecols=[
@@ -143,9 +145,10 @@ def handleSuperChats():
 
     stat_all.info()
 
-    stat_all.to_csv(join(DATA_DIR, 'superchat_stats.csv'), index=False)
+    stat_all.to_csv(join(DATASET_DIR, 'superchat_stats.csv'), index=False)
 
 
 if __name__ == '__main__':
+    print('dataset: ' + DATASET_DIR)
     handleSuperChats()
     handleChats()

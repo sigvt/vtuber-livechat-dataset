@@ -1,8 +1,10 @@
+from os import makedirs, environ
 import requests
 import csv
-from os.path import join, dirname
+from os.path import join
 
-DATA_DIR = join(dirname(__file__), '..', 'datasets', 'vtuber-livechat')
+DATASET_DIR = environ['DATASET_DIR']
+makedirs(DATASET_DIR, exist_ok=True)
 
 # https://vlueprint.org/
 
@@ -39,7 +41,7 @@ def get_channels(offset=0, limit=100):
 
 
 def create_channel_index():
-    fp = open(join(DATA_DIR, 'channels.csv'), 'w', encoding='UTF8')
+    fp = open(join(DATASET_DIR, 'channels.csv'), 'w', encoding='UTF8')
     writer = csv.writer(fp)
 
     writer.writerow([
@@ -67,4 +69,5 @@ def create_channel_index():
 
 
 if __name__ == '__main__':
+    print('dataset: ' + DATASET_DIR)
     create_channel_index()

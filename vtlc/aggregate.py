@@ -3,34 +3,19 @@ import csv
 import hashlib
 import os
 from datetime import datetime, timezone
-from os.path import dirname, join
+from os.path import join
+from vtlc.util.message import convertRawMessageToString
 
 import pymongo
 from dateutil.relativedelta import relativedelta
 
-ANONYMIZATION_SALT = os.environ.get('ANONYMIZATION_SALT')
-MONGODB_URI = os.environ.get('MONGODB_URI')
-DATA_DIR = join(dirname(__file__), '..', 'datasets/vtuber-livechat')
+from vtlc.util.superchat import \
+    convertHeaderBackgroundColorToColorAndSignificance
 
-superchatColors = {
-    '4279592384': 'blue',
-    '4278237396': 'lightblue',
-    '4278239141': 'green',
-    '4294947584': 'yellow',
-    '4293284096': 'orange',
-    '4290910299': 'magenta',
-    '4291821568': 'red',
-}
-
-superchatSignificance = {
-    'blue': 1,
-    'lightblue': 2,
-    'green': 3,
-    'yellow': 4,
-    'orange': 5,
-    'magenta': 6,
-    'red': 7,
-}
+ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
+MONGODB_URI = os.environ['MONGODB_URI']
+DATASET_DIR = os.environ['DATASET_DIR']
+os.makedirs(DATASET_DIR, exist_ok=True)
 
 # epoch time
 genesisEpoch = datetime.fromtimestamp(1610687733293 / 1000, timezone.utc)
@@ -45,26 +30,6 @@ missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
 # missingMembershipAndSuperchatColumnEpoch < incorrectSuperchatEpoch
 
 
-def convertRawMessageToString(rawMessage):
-
-    def handler(run):
-        msgType = list(run.keys())[0]
-        if msgType == 'text':
-            return run[msgType]
-        elif msgType == 'emoji':
-            # label = run[msgType]['image']['accessibility']['accessibilityData'][
-            #     'label']
-            """
-            Replacement character U+FFFD
-            https://en.wikipedia.org/wiki/Specials_(Unicode_block)#Replacement_character
-            """
-            return "\uFFFD"
-        else:
-            raise 'Invalid type: ' + msgType
-
-    return "".join([handler(run) for run in rawMessage])
-
-
 def accumulateChat(col, recent=-1, ignoreHalfway=False):
     print('# of chats', col.estimated_document_count())
 
@@ -74,7 +39,7 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
         print('While ignoring this month')
 
     def handleCursor(cursor, filename, sc_filename):
-        chatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
+        chatFp = open(join(DATASET_DIR, filename), 'w', encoding='UTF8')
         chatWriter = csv.writer(chatFp)
         chatWriter.writerow([
             'timestamp',
@@ -88,7 +53,7 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             'originChannelId',
         ])
 
-        superchatFp = open(join(DATA_DIR, sc_filename), 'w', encoding='UTF8')
+        superchatFp = open(join(DATASET_DIR, sc_filename), 'w', encoding='UTF8')
         superchatWriter = csv.writer(superchatFp)
         superchatWriter.writerow([
             'timestamp',
@@ -128,10 +93,9 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
                 if not isIncorrectSuperchat:
                     amount = doc['purchase']['amount']
                     currency = doc['purchase']['currency']
-                    color = superchatColors[doc['purchase']
-                                            ['headerBackgroundColor']]
-
-                    significance = superchatSignificance[color]
+                    [color, significance
+                    ] = convertHeaderBackgroundColorToColorAndSignificance(
+                        doc['purchase']['headerBackgroundColor'])
 
                     superchatWriter.writerow([
                         timestamp.isoformat(),
@@ -217,7 +181,7 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
 
     def handleCursor(cursor, filename):
         # superchatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
-        superchatFp = open(join(DATA_DIR, filename), 'a', encoding='UTF8')
+        superchatFp = open(join(DATASET_DIR, filename), 'a', encoding='UTF8')
         superchatWriter = csv.writer(superchatFp)
         # superchatWriter.writerow([
         #     'timestamp',
@@ -293,7 +257,7 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
 def accumulateBan(col):
     print('# of ban', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(DATA_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
+    f = open(join(DATASET_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -326,7 +290,7 @@ def accumulateBan(col):
 def accumulateDeletion(col):
     print('# of deletion', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(DATA_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
+    f = open(join(DATASET_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -364,7 +328,8 @@ if __name__ == '__main__':
     parser.add_argument('-R', '--recent', type=int, default=1)
     parser.add_argument('-I', '--ignore-halfway', action='store_true')
     args = parser.parse_args()
-    print('set base dir to', DATA_DIR)
+
+    print('dataset: ' + DATASET_DIR)
 
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
