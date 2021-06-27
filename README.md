@@ -1,6 +1,6 @@
 ![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
 
-# Vtuber 200M: Live Chat and Moderation Events
+# Vtuber 300M: Live Chat and Moderation Events
 
 Huge collection of hundreds of millions of live chat and super chat messages and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
@@ -30,10 +30,10 @@ See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datase
 
 | filename                        | summary                                        | size     |
 | ------------------------------- | ---------------------------------------------- | -------- |
-| `chats_:year:-:month:.csv`      | Live chat messages (230,000,000+)              | ~ 42 GB  |
-| `superchats_:year:-:month:.csv` | Super chat messages (700,000+)                 | ~ 160 MB |
-| `deletion_events.csv`           | Deletion events                                | ~ 75 MB  |
-| `ban_events.csv`                | Ban events                                     | ~ 15 MB  |
+| `chats_:year:-:month:.csv`      | Live chat messages (300,000,000+)              | ~ 55 GB  |
+| `superchats_:year:-:month:.csv` | Super chat messages (1,000,000+)               | ~ 250 MB |
+| `deletion_events.csv`           | Deletion events                                | ~ 100 MB |
+| `ban_events.csv`                | Ban events                                     | ~ 20 MB  |
 | `channels.csv`                  | Channel index                                  | < 1 MB   |
 | `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB   |
 | `superchat_stats.csv`           | Statistics for super chats                     | < 1 MB   |
@@ -237,10 +237,10 @@ Bans and deletions from multiple moderators for the same person or chat will be 
 ```latex
 @misc{vtuber-livechat-dataset,
  author={Yasuaki Uechi},
- title={Vtuber 200M: Large Scale Virtual YouTubers Live Chat Dataset},
+ title={Vtuber 300M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={28},
+ version={29},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```

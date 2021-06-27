@@ -325,7 +325,7 @@ def accumulateDeletion(col):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
-    parser.add_argument('-R', '--recent', type=int, default=1)
+    parser.add_argument('-R', '--recent', type=int, default=0)
     parser.add_argument('-I', '--ignore-halfway', action='store_true')
     args = parser.parse_args()
 

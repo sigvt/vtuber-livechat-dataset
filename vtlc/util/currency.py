@@ -37,6 +37,7 @@ CURRENCY_TO_TLS_MAP = {
     'HUF': 'HUF',
     'INR': 'INR',
     'ISK': 'ISK',
+    'JOD': 'JOD',
     'MAD': 'MAD',
     'MKD': 'MKD',
     'MX$': 'MXN',
