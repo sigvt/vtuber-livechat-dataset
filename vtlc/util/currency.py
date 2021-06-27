@@ -1,4 +1,11 @@
-CURRENCY_SYMBOL_MAP = {
+import os
+from os import path
+import time
+from functools import lru_cache
+import requests
+
+# convert currency to three-letter symbol
+CURRENCY_TO_TLS_MAP = {
     '$': 'USD',
     '£': 'GBP',
     '¥': 'JPY',
@@ -55,63 +62,40 @@ CURRENCY_SYMBOL_MAP = {
     'ZAR': 'ZAR',
 }
 
-APPROX_RATES_TO_JPY = {
-    'AED': 0.03,
-    'ARS': 1.26136,
-    'AUD': 0.0127098151,
-    'BAM': 0.01460468,
-    'BGN': 0.01460468,
-    'BOB': 0.06285513,
-    'BRL': 0.0501367157,
-    'BYN': 236.83,
-    'CAD': 0.0123889679,
-    'CHF': 0.00819122,
-    'CLP': 6.61,
-    'COP': 33.63,
-    'CRC': 5.72,
-    'CZK': 0.208,
-    'DKK': 0.05552193,
-    'DOP': 0.53,
-    'EGP': 0.14253745,
-    'GBP': 0.0071446183,
-    'GTQ': 0.07,
-    'HKD': 0.0748624941,
-    'HNL': 0.22,
-    'HRK': 0.05606733,
-    'HUF': 2.872293346,
-    'ILS': 0.02960463,
-    'INR': 0.69,
-    'INY': 0.703,
-    'ISK': 1.16,
-    'JPY': 1,
-    'KRW': 10.5964122017,
-    'MAD': 0.08028517,
-    'MKD': 0.47,
-    'MXN': 0.1921416153,
-    'MYR': 0.03763261,
-    'NIO': 0.32,
-    'NOK': 0.0835411728,
-    'NZD': 0.03559,
-    'PHP': 0.43425395,
-    'PLN': 0.03559,
-    'PYG': 60.2,
-    'QAR': 0.03313398,
-    'RON': 0.0367296,
-    'RSD': 0.91,
-    'RUB': 0.66471683,
-    'SAR': 0.03413528,
-    'SEK': 0.07562924,
-    'SGD': 0.01204301,
-    'TRY': 0.07782101,
-    'TWD': 3.9583,
-    'USD': 0.00910274,
-    'UYU': 0.41,
-    'ZAR': 0.13,
-}
+API_HOST = 'currency-exchange.p.rapidapi.com'
+API_KEY = os.environ['CURRENCY_API_KEY']
+SNAPSHOT_DIR = path.join(path.dirname(__file__), '../currency_snapshot')
 
 
-def convertToJPY(amount: float, currency: str):
-    return amount / APPROX_RATES_TO_JPY[CURRENCY_SYMBOL_MAP[currency]]
+def fetchRate(src: str, tgt: str) -> float:
+    print(f'querying exchange rate for: {src} > {tgt}')
+
+    querystring = {"to": tgt, "from": src}
+    headers = {'x-rapidapi-key': API_KEY, 'x-rapidapi-host': API_HOST}
+    response = requests.request("GET",
+                                f"https://{API_HOST}/exchange",
+                                headers=headers,
+                                params=querystring)
+    data = response.text
+    return float(data)
+
+
+@lru_cache(maxsize=256)
+def getRateToJPY(tls: str) -> float:
+    try:
+        with open(path.join(SNAPSHOT_DIR, tls), 'r') as f:
+            return float(f.read())
+    except FileNotFoundError:
+        time.sleep(5)
+        rate = fetchRate(tls, "JPY")
+        with open(path.join(SNAPSHOT_DIR, tls), 'w') as f:
+            f.write(str(rate))
+        return rate
+
+
+@lru_cache(maxsize=256)
+def convertToJPY(amount: float, currency: str) -> float:
+    return amount * getRateToJPY(CURRENCY_TO_TLS_MAP[currency])
 
 
 def applyJPY(col):
