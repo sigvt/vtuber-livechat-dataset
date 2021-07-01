@@ -26,7 +26,7 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
 
-Join [holodata Discord](https://discord.gg/GtPfNNKKGk) for further discussions.
+Join [holodata Discord](https://discord.gg/WdppARHgcy) for further discussions.
 
 ## Dataset Breakdown
 
