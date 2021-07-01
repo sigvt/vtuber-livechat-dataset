@@ -26,6 +26,8 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
 
+Join [holodata Discord](https://discord.gg/GtPfNNKKGk) for further discussions.
+
 ## Dataset Breakdown
 
 | filename                        | summary                                        | size     |
@@ -40,7 +42,7 @@ See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datase
 
 > Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
-We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect live chat events across Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
+We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
 ### Chats (`chats_:year:-:month:.csv`)
 
