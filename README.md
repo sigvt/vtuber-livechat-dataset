@@ -32,9 +32,9 @@ Join [holodata Discord](https://discord.gg/WdppARHgcy) for further discussions.
 
 | filename                        | summary                                        | size     |
 | ------------------------------- | ---------------------------------------------- | -------- |
-| `chats_:year:-:month:.csv`      | Live chat messages (300,000,000+)              | ~ 55 GB  |
-| `superchats_:year:-:month:.csv` | Super chat messages (1,000,000+)               | ~ 250 MB |
-| `deletion_events.csv`           | Deletion events                                | ~ 100 MB |
+| `chats_:year:-:month:.csv`      | Live chat messages (390,000,000+)              | ~ 70 GB  |
+| `superchats_:year:-:month:.csv` | Super chat messages (1,400,000+)               | ~ 320 MB |
+| `deletion_events.csv`           | Deletion events                                | ~ 120 MB |
 | `ban_events.csv`                | Ban events                                     | ~ 20 MB  |
 | `channels.csv`                  | Channel index                                  | < 1 MB   |
 | `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB   |
@@ -242,7 +242,7 @@ Bans and deletions from multiple moderators for the same person or chat will be 
  title={Vtuber 300M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={29},
+ version={30},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```
