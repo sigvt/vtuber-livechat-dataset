@@ -9,8 +9,7 @@ from vtlc.util.message import convertRawMessageToString
 import pymongo
 from dateutil.relativedelta import relativedelta
 
-from vtlc.util.superchat import \
-    convertHeaderBackgroundColorToColorAndSignificance
+from vtlc.util.superchat import convertHeaderBackgroundColorToColorAndSignificance
 
 ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
 MONGODB_URI = os.environ['MONGODB_URI']

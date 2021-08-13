@@ -6,6 +6,8 @@ Huge collection of hundreds of millions of live chat, super chat, and moderation
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
+Join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for the questions and discussions.
+
 ## Provenance
 
 - **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net), including Hololive, Nijisanji, 774inc, etc)
@@ -25,8 +27,6 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 - Sentence Transformer for Live Chat
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
-
-Join [holodata Discord](https://discord.gg/WdppARHgcy) for further discussions.
 
 ## Dataset Breakdown
 
@@ -196,6 +196,7 @@ chats['banned'].fillna(False, inplace=True)
 | group             | nullable string | group                  |
 | subscriptionCount | number          | subscription count     |
 | videoCount        | number          | uploads count          |
+| photo             | string          | channel icon           |
 
 ### Chat Statistics (`chat_stats.csv`)
 

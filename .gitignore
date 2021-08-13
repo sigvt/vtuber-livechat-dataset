@@ -3,7 +3,6 @@
 .vscode
 /tmp
 
-*.ipynb
 *.tar.gz
 *.csv
 
