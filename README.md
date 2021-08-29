@@ -4,9 +4,7 @@
 
 VTuber 400M is a huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
-Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
-
-Join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for the questions and discussions.
+Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) and join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for discussions.
 
 ## Provenance
 
@@ -48,17 +46,16 @@ To make it a balanced dataset, the number of `chats_nonflags` is adjusted (rando
 
 ### Full version
 
-Full version is only available to those approved by the admins. Please reach us on `#vtuber-livechat` channel on [holodata Discord server](https://holodata.org/discord) or to `uechiy@acm.org`.
+Full version is only available to those approved by the admins. If you are interested in conducting research or analysis using the dataset, please reach us at `#vtuber-livechat` channel on [holodata Discord server](https://holodata.org/discord) or at `uechiy@acm.org` (for organizations).
 
-| filename               | summary                                        | size     |
-| ---------------------- | ---------------------------------------------- | -------- |
-| `chats_%Y-%m.csv`      | Live chat messages (480,000,000+)              | ~ 80 GB  |
-| `superchats_%Y-%m.csv` | Super chat messages (1,400,000+)               | ~ 400 MB |
-| `deletion_events.csv`  | Deletion events                                | ~ 150 MB |
-| `ban_events.csv`       | Ban events                                     | ~ 25 MB  |
-| `channels.csv`         | Channel index                                  | < 1 MB   |
-| `chat_stats.csv`       | Statistics for chats, ban, and deletion events | < 1 MB   |
-| `superchat_stats.csv`  | Statistics for super chats                     | < 1 MB   |
+| filename               | summary                           | size     |
+| ---------------------- | --------------------------------- | -------- |
+| `chats_%Y-%m.csv`      | Live chat messages (480,000,000+) | ~ 80 GB  |
+| `superchats_%Y-%m.csv` | Super chat messages (1,400,000+)  | ~ 400 MB |
+| `deletion_events.csv`  | Deletion events                   | ~ 150 MB |
+| `ban_events.csv`       | Ban events                        | ~ 25 MB  |
+| `channels.csv`         | Channel index                     | < 1 MB   |
+| `channel_stats.csv`    | Channel statistics                | < 1 MB   |
 
 ## Dataset Breakdown
 

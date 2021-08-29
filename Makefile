@@ -14,3 +14,6 @@ postprocess:
 
 upload:
 	kaggle datasets version -m "New version" --path $$DATASET_ROOT/$$DATASET_NAME
+
+uploadFull:
+	kaggle datasets version -m "New version" --path $$DATASET_ROOT/$$DATASET_NAME_FULL
