@@ -1,10 +1,9 @@
 .envrc
 .env
 .vscode
+*.code-workspace
 /tmp
-
-*.tar.gz
-*.csv
+/*.ipynb
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

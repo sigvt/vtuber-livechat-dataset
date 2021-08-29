@@ -4,17 +4,17 @@ import hashlib
 import os
 from datetime import datetime, timezone
 from os.path import join
-from vtlc.util.message import convertRawMessageToString
 
 import pymongo
 from dateutil.relativedelta import relativedelta
 
-from vtlc.util.superchat import convertHeaderBackgroundColorToColorAndSignificance
+from vtlc.constants import DATASET_DIR_FULL
+from vtlc.util.message import convertRawMessageToString
+from vtlc.util.superchat import \
+    convertHeaderBackgroundColorToColorAndSignificance
 
 ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
 MONGODB_URI = os.environ['MONGODB_URI']
-DATASET_DIR = os.environ['DATASET_DIR']
-os.makedirs(DATASET_DIR, exist_ok=True)
 
 # epoch time
 genesisEpoch = datetime.fromtimestamp(1610687733293 / 1000, timezone.utc)
@@ -38,7 +38,7 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
         print('While ignoring this month')
 
     def handleCursor(cursor, filename, sc_filename):
-        chatFp = open(join(DATASET_DIR, filename), 'w', encoding='UTF8')
+        chatFp = open(join(DATASET_DIR_FULL, filename), 'w', encoding='UTF8')
         chatWriter = csv.writer(chatFp)
         chatWriter.writerow([
             'timestamp',
@@ -47,12 +47,14 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             'isModerator',
             'isVerified',
             'id',
+            'authorChannelId',
+            'videoId',
             'channelId',
-            'originVideoId',
-            'originChannelId',
         ])
 
-        superchatFp = open(join(DATASET_DIR, sc_filename), 'w', encoding='UTF8')
+        superchatFp = open(join(DATASET_DIR_FULL, sc_filename),
+                           'w',
+                           encoding='UTF8')
         superchatWriter = csv.writer(superchatFp)
         superchatWriter.writerow([
             'timestamp',
@@ -62,9 +64,9 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             'significance',
             'body',
             'id',
+            'authorChannelId',
+            'videoId',
             'channelId',
-            'originVideoId',
-            'originChannelId',
         ])
 
         for doc in cursor:
@@ -74,14 +76,15 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             # anonymize id and author channel id with grain of salt
             chatId = hashlib.sha1(
                 (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
-            channelId = hashlib.sha1((doc['authorChannelId'] +
-                                      ANONYMIZATION_SALT).encode()).hexdigest()
+            authorChannelId = hashlib.sha1(
+                (doc['authorChannelId'] +
+                 ANONYMIZATION_SALT).encode()).hexdigest()
 
             text = convertRawMessageToString(doc['message'] if 'message' in
                                              doc else doc['rawMessage'])
 
-            originVideoId = doc['originVideoId']
-            originChannelId = doc['originChannelId']
+            videoId = doc['originVideoId']
+            channelId = doc['originChannelId']
 
             isSuperchat = 1 if 'purchase' in doc else 0
 
@@ -104,9 +107,9 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
                         significance,
                         text,
                         chatId,
+                        authorChannelId,
+                        videoId,
                         channelId,
-                        originVideoId,
-                        originChannelId,
                     ])
 
                 continue
@@ -137,9 +140,9 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
                 isModerator,
                 isVerified,
                 chatId,
+                authorChannelId,
+                videoId,
                 channelId,
-                originVideoId,
-                originChannelId,
             ])
 
         chatFp.close()
@@ -179,8 +182,10 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
         print('While ignoring this month')
 
     def handleCursor(cursor, filename):
-        # superchatFp = open(join(DATA_DIR, filename), 'w', encoding='UTF8')
-        superchatFp = open(join(DATASET_DIR, filename), 'a', encoding='UTF8')
+        # superchatFp = open(join(DATASET_DIR_FULL, filename), 'w', encoding='UTF8')
+        superchatFp = open(join(DATASET_DIR_FULL, filename),
+                           'a',
+                           encoding='UTF8')
         superchatWriter = csv.writer(superchatFp)
         # superchatWriter.writerow([
         #     'timestamp',
@@ -190,9 +195,9 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
         #     'significance',
         #     'body',
         #     'id',
+        #     'authorChannelId',
+        #     'videoId',
         #     'channelId',
-        #     'originVideoId',
-        #     'originChannelId',
         # ])
 
         for doc in cursor:
@@ -202,13 +207,14 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
             # anonymize id and author channel id with grain of salt
             chatId = hashlib.sha1(
                 (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
-            channelId = hashlib.sha1((doc['authorChannelId'] +
-                                      ANONYMIZATION_SALT).encode()).hexdigest()
+            authorChannelId = hashlib.sha1(
+                (doc['authorChannelId'] +
+                 ANONYMIZATION_SALT).encode()).hexdigest()
 
             text = convertRawMessageToString(doc['message'])
 
-            originVideoId = doc['originVideoId']
-            originChannelId = doc['originChannelId']
+            videoId = doc['originVideoId']
+            channelId = doc['originChannelId']
             amount = doc['purchaseAmount']
             currency = doc['currency']
             color = doc['color']
@@ -222,9 +228,9 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
                 significance,
                 text,
                 chatId,
+                authorChannelId,
+                videoId,
                 channelId,
-                originVideoId,
-                originChannelId,
             ])
 
         superchatFp.close()
@@ -256,31 +262,31 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
 def accumulateBan(col):
     print('# of ban', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(DATASET_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
+    f = open(join(DATASET_DIR_FULL, 'ban_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
         'timestamp',
+        'authorChannelId',
+        'videoId',
         'channelId',
-        'originVideoId',
-        'originChannelId',
     ]
     writer.writerow(columns)
 
     for doc in cursor:
         # anonymize author channel id with grain of salt
-        channelId = hashlib.sha1(
+        authorChannelId = hashlib.sha1(
             (doc['channelId'] + ANONYMIZATION_SALT).encode()).hexdigest()
-        originVideoId = doc['originVideoId']
-        originChannelId = doc['originChannelId']
+        videoId = doc['originVideoId']
+        channelId = doc['originChannelId']
         timestamp = doc['timestamp'].replace(
             tzinfo=timezone.utc).isoformat() if 'timestamp' in doc else None
 
         writer.writerow([
             timestamp,
+            authorChannelId,
+            videoId,
             channelId,
-            originVideoId,
-            originChannelId,
         ])
 
     f.close()
@@ -289,15 +295,17 @@ def accumulateBan(col):
 def accumulateDeletion(col):
     print('# of deletion', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(DATASET_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
+    f = open(join(DATASET_DIR_FULL, 'deletion_events.csv'),
+             'w',
+             encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
         'timestamp',
         'id',
         'retracted',
-        'originVideoId',
-        'originChannelId',
+        'videoId',
+        'channelId',
     ]
     writer.writerow(columns)
 
@@ -305,8 +313,8 @@ def accumulateDeletion(col):
         # anonymize author channel id with grain of salt
         chatId = hashlib.sha1(
             (doc['targetId'] + ANONYMIZATION_SALT).encode()).hexdigest()
-        originVideoId = doc['originVideoId']
-        originChannelId = doc['originChannelId']
+        videoId = doc['originVideoId']
+        channelId = doc['originChannelId']
         retracted = 1 if doc['retracted'] else 0
         timestamp = doc['timestamp'].replace(
             tzinfo=timezone.utc).isoformat() if 'timestamp' in doc else None
@@ -315,8 +323,8 @@ def accumulateDeletion(col):
             timestamp,
             chatId,
             retracted,
-            originVideoId,
-            originChannelId,
+            videoId,
+            channelId,
         ])
 
     f.close()
@@ -328,7 +336,7 @@ if __name__ == '__main__':
     parser.add_argument('-I', '--ignore-halfway', action='store_true')
     args = parser.parse_args()
 
-    print('dataset: ' + DATASET_DIR)
+    print('dataset: ' + DATASET_DIR_FULL)
 
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa

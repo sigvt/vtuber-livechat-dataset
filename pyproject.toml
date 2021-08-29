@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "vtuber-livechat-dataset"
+name = "vtuber-livechat"
 version = "1.0.0"
 description = "Large Scale Virtual YouTubers Live Chat Dataset"
 authors = ["Yasuaki Uechi <y@uechi.io>"]
@@ -8,16 +8,16 @@ authors = ["Yasuaki Uechi <y@uechi.io>"]
 python = "^3.9"
 kaggle = "^1.5.12"
 numpy = "^1.21.0"
-matplotlib = "^3.4.2"
 pandas = "^1.2.3"
 pymongo = "^3.11.3"
-streamlit = "^0.83.0"
-plotly = "^5.0.0"
 python-dateutil = "^2.8.1"
 altair = "^4.1.0"
+matplotlib = "^3.4.2"
+streamlit = "^0.87.0"
+plotly = "^5.0.0"
 
 [tool.poetry.dev-dependencies]
-ipykernel = "^5.5.0"
+ipykernel = "^6.2.0"
 yapf = "^0.31.0"
 
 [build-system]

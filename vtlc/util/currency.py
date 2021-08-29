@@ -11,7 +11,7 @@ CURRENCY_TO_TLS_MAP = {
     '¥': 'JPY',
     '₩': 'KRW',
     '₪': 'ILS',
-    '€': 'USD',
+    '€': 'EUR',
     '₱': 'PHP',
     '₹': 'INR',
     'A$': 'AUD',
@@ -46,7 +46,7 @@ CURRENCY_TO_TLS_MAP = {
     'NOK': 'NOK',
     'NT$': 'TWD',
     'NZ$': 'NZD',
-    'PEN': 'USD',
+    'PEN': 'PEN',
     'PHP': 'PHP',
     'PLN': 'PLN',
     'PYG': 'PYG',
@@ -94,10 +94,17 @@ def getRateToJPY(tls: str) -> float:
         return rate
 
 
+import math
+
+
 @lru_cache(maxsize=256)
 def convertToJPY(amount: float, currency: str) -> float:
-    return amount * getRateToJPY(CURRENCY_TO_TLS_MAP[currency])
+    return round(amount * getRateToJPY(CURRENCY_TO_TLS_MAP[currency]))
 
 
 def applyJPY(col):
-    return convertToJPY(col['amount'], col['currency'])
+    res = convertToJPY(col['amount'], col['currency'])
+    if math.isinf(res):
+        print(col)
+        raise col
+    return res

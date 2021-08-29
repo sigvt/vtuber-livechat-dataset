@@ -5,6 +5,10 @@ import numpy as np
 import pandas as pd
 import altair as alt
 from altair import Chart, X, Y, Text, Axis, TitleParams, datum
+import sys
+
+sys.path.append('..')
+from vtlc.constants import DATASET_DIR_FULL
 
 
 def holodata_theme():
@@ -53,13 +57,31 @@ def holodata_theme():
 alt.themes.register('holodata', holodata_theme)
 alt.themes.enable('holodata')
 
-DATASET_DIR = os.environ.get('DATASET_DIR')
+
+def load_chat(month, **kwargs):
+    # https://towardsdatascience.com/optimize-pandas-memory-usage-while-reading-large-datasets-1b047c762c9b
+    # groupby(sort=False, observed=True)
+    dtype_dict = {
+        'isModerator': bool,
+        'isVerified': bool,
+        'membership': 'category',
+        'channelId': 'category',
+        'originChannelId': 'category',
+        'originVideoId': 'category'
+    }
+    df = pd.read_csv(join(DATASET_DIR_FULL, f'chats_{month}.csv'),
+                     na_values='',
+                     keep_default_na=False,
+                     dtype=dtype_dict,
+                     **kwargs)
+
+    return df
 
 
 def load_sc():
     df = pd.concat([
         pd.read_csv(f, na_values='', keep_default_na=False)
-        for f in iglob(join(DATASET_DIR, 'superchats_*.csv'))
+        for f in iglob(join(DATASET_DIR_FULL, 'superchats_*.csv'))
     ],
                    ignore_index=True)
 
@@ -79,10 +101,25 @@ def load_sc():
     return df
 
 
+def load_channels(**kwargs):
+    dtype_dict = {
+        'channelId': 'category',
+        'name': 'category',
+        'name.en': 'category',
+        'affiliation': 'category',
+        'subscriptionCount': 'int32',
+        'videoCount': 'int16',
+        'photo': 'category'
+    }
+    channels = pd.read_csv(join(DATASET_DIR_FULL, 'channels.csv'),
+                           dtype=dtype_dict,
+                           **kwargs)
+    return channels
+
+
 def load_hololive():
-    stats = pd.read_csv(join(DATASET_DIR, 'chat_stats.csv'))
-    sc_stats = pd.read_csv(join(DATASET_DIR, 'superchat_stats.csv'))
-    channels = pd.read_csv(join(DATASET_DIR, 'channels.csv'))
+    stats = pd.read_csv(join(DATASET_DIR_FULL, 'channel_stats.csv'))
+    channels = load_channels()
 
     channels = channels[(channels['affiliation'] == 'Hololive') &
                         (channels['group'] != 'INACTIVE')]
@@ -105,14 +142,9 @@ def load_hololive():
                                                     subChannels + graduated)]
 
     # merge stats columns
-    stats_all = pd.merge(stats,
-                         sc_stats,
-                         on=['channelId', 'period'],
-                         how='left')
-    numeric_columns = stats_all.select_dtypes(include=['number']).columns
-    stats_all[numeric_columns] = stats_all[numeric_columns].fillna(0).astype(
-        'int')
-    channels = pd.merge(channels, stats_all, on=['channelId'], how='left')
+    numeric_columns = stats.select_dtypes(include=['number']).columns
+    stats[numeric_columns] = stats[numeric_columns].fillna(0).astype('int')
+    channels = pd.merge(channels, stats, on=['channelId'], how='left')
 
     # sex
     channels['sex'] = channels['group'].apply(
@@ -133,15 +165,14 @@ def load_hololive():
     overall = channels.groupby('name.en').agg({
         'subscriptionCount': 'first',
         'videoCount': 'first',
-        'chatCount': 'sum',
-        'chatNunique': 'mean',
-        'banCount': 'sum',
-        'banNunique': 'mean',
-        'deletionCount': 'sum',
-        'scCount': 'sum',
-        'scNunique': 'mean',
-        'scTotalJPY': 'sum',
-        'scMeanJPY': 'last',
+        'chats': 'sum',
+        'uniqueChatters': 'mean',
+        'bannedChatters': 'mean',
+        'deletedChats': 'sum',
+        'superChats': 'sum',
+        'uniqueSuperChatters': 'mean',
+        'totalSC': 'sum',
+        'averageSC': 'last',
         'affiliation': 'first',
         'group': 'first',
         'name': 'first',
@@ -150,6 +181,6 @@ def load_hololive():
         'photo': 'first'
     }).reset_index()
 
-    overall['chatCountPerUser'] = overall['chatCount'] / overall['chatNunique']
+    overall['chatCountPerUser'] = overall['chats'] / overall['uniqueChatters']
 
     return (channels, overall)

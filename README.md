@@ -1,8 +1,8 @@
 ![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
 
-# Vtuber 300M: Live Chat and Moderation Events
+# VTuber 400M: Live Chat and Moderation Events
 
-Huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
+VTuber 400M is a huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
@@ -24,27 +24,47 @@ Join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/disc
 - Spam Detection
 - Demographic Visualization
 - Superchat Analysis
-- Sentence Transformer for Live Chat
+- Sentence Transformer for Live Chats
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
 
-## Dataset Breakdown
-
-| filename                        | summary                                        | size     |
-| ------------------------------- | ---------------------------------------------- | -------- |
-| `chats_:year:-:month:.csv`      | Live chat messages (390,000,000+)              | ~ 70 GB  |
-| `superchats_:year:-:month:.csv` | Super chat messages (1,400,000+)               | ~ 320 MB |
-| `deletion_events.csv`           | Deletion events                                | ~ 120 MB |
-| `ban_events.csv`                | Ban events                                     | ~ 20 MB  |
-| `channels.csv`                  | Channel index                                  | < 1 MB   |
-| `chat_stats.csv`                | Statistics for chats, ban, and deletion events | < 1 MB   |
-| `superchat_stats.csv`           | Statistics for super chats                     | < 1 MB   |
-
-> Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
-
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
-### Chats (`chats_:year:-:month:.csv`)
+## Editions
+
+### Standard version
+
+Standard version is available at [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
+
+| filename                  | summary                                                        | size     |
+| ------------------------- | -------------------------------------------------------------- | -------- |
+| `channels.csv`            | Channel index                                                  | < 1 MB   |
+| `channel_stats.csv`       | Channel statistics                                             | < 1 MB   |
+| `chats_flagged_%Y-%m.csv` | Chats flagged as either deleted or banned by mods (3,000,000+) | ~ 500 MB |
+| `chats_nonflag_%Y-%m.csv` | Non-flagged chats (3,000,000+)                                 | ~ 500 MB |
+| `superchats_%Y-%m.csv`    | Super chat messages (1,400,000+)                               | ~ 400 MB |
+
+To make it a balanced dataset, the number of `chats_nonflags` is adjusted (randomly sampled) to be the same as `chats_flagged`.
+
+### Full version
+
+Full version is only available to those approved by the admins. Please reach us on `#vtuber-livechat` channel on [holodata Discord server](https://holodata.org/discord) or to `uechiy@acm.org`.
+
+| filename               | summary                                        | size     |
+| ---------------------- | ---------------------------------------------- | -------- |
+| `chats_%Y-%m.csv`      | Live chat messages (480,000,000+)              | ~ 80 GB  |
+| `superchats_%Y-%m.csv` | Super chat messages (1,400,000+)               | ~ 400 MB |
+| `deletion_events.csv`  | Deletion events                                | ~ 150 MB |
+| `ban_events.csv`       | Ban events                                     | ~ 25 MB  |
+| `channels.csv`         | Channel index                                  | < 1 MB   |
+| `chat_stats.csv`       | Statistics for chats, ban, and deletion events | < 1 MB   |
+| `superchat_stats.csv`  | Statistics for super chats                     | < 1 MB   |
+
+## Dataset Breakdown
+
+Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
+
+### Chats (`chats_%Y-%m.csv`)
 
 | column          | type    | description                  |
 | --------------- | ------- | ---------------------------- |
@@ -198,28 +218,24 @@ chats['banned'].fillna(False, inplace=True)
 | videoCount        | number          | uploads count          |
 | photo             | string          | channel icon           |
 
-### Chat Statistics (`chat_stats.csv`)
+Inactive channels have `INACTIVE` in `group` column.
 
-| column        | type   | description                                     |
-| ------------- | ------ | ----------------------------------------------- |
-| channelId     | string | channel id                                      |
-| period        | string | interested period (%Y-%M)                       |
-| chatCount     | number | number of chats                                 |
-| chatNunique   | number | number of unique users                          |
-| banCount      | number | number of ban events                            |
-| banNunique    | number | number of unique users marked as banned by mods |
-| deletionCount | number | number of chats deleted by mods                 |
+### Channel Statistics (`channel_stats.csv`)
 
-### Super Chat Statistics (`superchat_stats.csv`)
-
-| column     | type   | description                        |
-| ---------- | ------ | ---------------------------------- |
-| channelId  | string | channel id                         |
-| period     | string | interested period (%Y-%M)          |
-| scCount    | number | number of super chats              |
-| scNunique  | number | number of unique users             |
-| scTotalJPY | number | total amount of super chats (JPY)  |
-| scMeanJPY  | number | average amount of super chat (JPY) |
+| column              | type   | description                                        |
+| ------------------- | ------ | -------------------------------------------------- |
+| channelId           | string | channel id                                         |
+| period              | string | interested period (%Y-%M)                          |
+| chats               | number | number of chats                                    |
+| memberChats         | number | number of chats with membership status attached    |
+| superChats          | number | number of super chats                              |
+| uniqueChatters      | number | number of unique chatters                          |
+| uniqueMembers       | number | number of unique members appeared on live chat     |
+| uniqueSuperChatters | number | number of unique super chatters                    |
+| totalSC             | number | total amount of super chats (JPY)                  |
+| averageSC           | number | average amount of super chat (JPY)                 |
+| bannedChatters      | number | number of unique chatters marked as banned by mods |
+| deletedChats        | number | number of chats deleted by mods                    |
 
 ## Consideration
 
@@ -240,10 +256,10 @@ Bans and deletions from multiple moderators for the same person or chat will be 
 ```latex
 @misc{vtuber-livechat-dataset,
  author={Yasuaki Uechi},
- title={Vtuber 300M: Large Scale Virtual YouTubers Live Chat Dataset},
+ title={VTuber 400M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
- version={30},
+ version={31},
  url={https://github.com/holodata/vtuber-livechat-dataset}
 }
 ```

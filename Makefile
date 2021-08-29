@@ -7,10 +7,10 @@ preprocess:
 
 aggregate:
 	python3 -m vtlc.aggregate -I -R1
-	rm -f datasets/vtuber-livechat/superchats_2021-0{1,2}.csv
+	rm -f $$DATASET_ROOT/$$DATASET_NAME/superchats_2021-0{1,2}.csv
 
 postprocess:
-	python3 -m vtlc.postprocess
+	python3 -m vtlc.postprocess -sd
 
 upload:
-	kaggle datasets version -m "New version" --path $$DATASET_DIR
+	kaggle datasets version -m "New version" --path $$DATASET_ROOT/$$DATASET_NAME

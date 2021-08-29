@@ -1,10 +1,10 @@
-from os import makedirs, environ
-import requests
 import csv
 from os.path import join
+import shutil
 
-DATASET_DIR = environ['DATASET_DIR']
-makedirs(DATASET_DIR, exist_ok=True)
+import requests
+
+from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
 
 
 def get_channels(offset=0, limit=100):
@@ -26,7 +26,7 @@ def get_channels(offset=0, limit=100):
 
 
 def create_channel_index():
-    fp = open(join(DATASET_DIR, 'channels.csv'), 'w', encoding='UTF8')
+    fp = open(join(DATASET_DIR_FULL, 'channels.csv'), 'w', encoding='UTF8')
     writer = csv.writer(fp)
 
     writer.writerow([
@@ -38,7 +38,7 @@ def create_channel_index():
         writer.writerow([
             channel['id'], channel['name'], channel['english_name'] or
             channel['name'], channel['org'] or 'Independents', channel['group'],
-            channel['subscriber_count'], channel['video_count'],
+            channel['subscriber_count'] or 0, channel['video_count'] or 0,
             channel['photo']
         ])
 
@@ -46,5 +46,8 @@ def create_channel_index():
 
 
 if __name__ == '__main__':
-    print('dataset: ' + DATASET_DIR)
+    print('dataset: ' + DATASET_DIR_FULL)
+
     create_channel_index()
+
+    shutil.copy(join(DATASET_DIR_FULL, 'channels.csv'), DATASET_DIR)
