@@ -28,7 +28,7 @@ See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datase
 
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
-## Editions
+## Versions
 
 ### Standard version
 
@@ -46,7 +46,7 @@ To make it a balanced dataset, the number of `chats_nonflags` is adjusted (rando
 
 ### Full version
 
-Full version is only available to those approved by the admins. If you are interested in conducting research or analysis using the dataset, please reach us at `#vtuber-livechat` channel on [holodata Discord server](https://holodata.org/discord) or at `uechiy@acm.org` (for organizations).
+Full version is only available to those approved by the admins. If you are interested in conducting research or analysis using the dataset, please reach us at `#livechat-dataset` channel on [holodata Discord server](https://holodata.org/discord) or at `uechiy@acm.org` (for organizations).
 
 | filename               | summary                           | size     |
 | ---------------------- | --------------------------------- | -------- |
