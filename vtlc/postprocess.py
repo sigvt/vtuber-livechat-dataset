@@ -49,10 +49,11 @@ def load_moderation_events():
     ban = ban.groupby([
         'channelId',
         'period',
-    ], observed=True).agg({'channelId': ['nunique',]})
+    ], observed=True).agg({'authorChannelId': ['nunique']})
     ban.columns = ['_'.join(col) for col in ban.columns.values]
     ban.reset_index(inplace=True)
-    ban.rename(columns={'channelId_nunique': 'bannedChatters'}, inplace=True)
+    ban.rename(columns={'authorChannelId_nunique': 'bannedChatters'},
+               inplace=True)
     # ban.info()
 
     return [ban, delet]
@@ -266,15 +267,98 @@ def generate_superchat_stats():
     stats.to_csv(join(DATASET_DIR_FULL, 'superchat_stats.csv'), index=False)
 
 
+def generate_reduced_chats(matcher):
+    print('[generate_reduced_chats]')
+    for f in sorted(iglob(join(DATASET_DIR_FULL, f'chats_{matcher}.csv'))):
+        target = join(DATASET_DIR, basename(f))
+        print('>>> Loading:', f)
+
+        df = pd.read_csv(
+            f,
+            na_values='',
+            keep_default_na=False,
+            parse_dates=['timestamp'],
+            usecols=[
+                'timestamp',
+                # 'body',
+                'membership',
+                #  'isModerator',
+                #  'isVerified',
+                # 'id',
+                'authorChannelId',
+                'videoId',
+                'channelId',
+            ])
+
+        print('>>> Reducing data')
+
+        def binMember(x):
+            if x == 'unknown':
+                return None
+            return 0 if x == 'non-member' else 1
+
+        df['isMember'] = df['membership'].apply(binMember)
+        df.drop(columns=['membership'], inplace=True)
+
+        print('>>> Saving:', target)
+        df.to_csv(target, index=False, date_format='%Y%m%dT%H%MZ')
+
+        del df
+        gc.collect()
+
+
+def generate_reduced_superchats(matcher):
+    print('[generate_reduced_superchats]')
+    for f in sorted(iglob(join(DATASET_DIR_FULL, f'superchats_{matcher}.csv'))):
+        target = join(DATASET_DIR, basename(f))
+        print('>>> Loading:', f)
+
+        df = pd.read_csv(
+            f,
+            na_values='',
+            keep_default_na=False,
+            parse_dates=['timestamp'],
+            usecols=[
+                'timestamp',
+                'amount',
+                'currency',
+                #  'color',
+                'significance',
+                # 'body',
+                # 'id',
+                'authorChannelId',
+                # 'videoId',
+                'channelId',
+            ])
+
+        print('>>> Reducing data')
+        # df.drop(columns=['body', 'id', 'videoId'], inplace=True)
+
+        print('>>> Saving:', target)
+        df.to_csv(target, index=False, date_format='%Y%m%dT%H%MZ')
+
+        del df
+        gc.collect()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
+    parser.add_argument('-m', '--matcher', type=str, default='*')
     args = parser.parse_args()
 
-    print('target: ' + DATASET_DIR)
     print('source: ' + DATASET_DIR_FULL)
+    print('target: ' + DATASET_DIR)
+
+    # copy moderation events
+    # TODO: remove this after everything
+    shutil.copy(join(DATASET_DIR_FULL, 'deletion_events.csv'), DATASET_DIR)
+    shutil.copy(join(DATASET_DIR_FULL, 'ban_events.csv'), DATASET_DIR)
+
+    generate_reduced_chats(matcher=args.matcher)
+    # generate_reduced_superchats(matcher=args.matcher)
 
     # generate_chat_stats()
     # shutil.copy(join(DATASET_DIR_FULL, 'chat_stats.csv'), DATASET_DIR)
 
-    generate_superchat_stats()
-    shutil.copy(join(DATASET_DIR_FULL, 'superchat_stats.csv'), DATASET_DIR)
+    # generate_superchat_stats()
+    # shutil.copy(join(DATASET_DIR_FULL, 'superchat_stats.csv'), DATASET_DIR)

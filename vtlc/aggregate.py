@@ -2,14 +2,15 @@ import argparse
 import csv
 import hashlib
 import os
+import shutil
 from datetime import datetime, timezone
 from os.path import join
-from vtlc.util.currency import CURRENCY_TO_TLS_MAP
 
 import pymongo
 from dateutil.relativedelta import relativedelta
 
-from vtlc.constants import DATASET_DIR_FULL
+from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
+from vtlc.util.currency import CURRENCY_TO_TLS_MAP
 from vtlc.util.message import convertRawMessageToString
 from vtlc.util.superchat import \
     convertHeaderBackgroundColorToColorAndSignificance
@@ -348,5 +349,9 @@ if __name__ == '__main__':
     accumulateSuperChat(db.superchats,
                         recent=args.recent,
                         ignoreHalfway=args.ignore_halfway)
-    accumulateBan(db.banactions)
     accumulateDeletion(db.deleteactions)
+    accumulateBan(db.banactions)
+
+    # copy moderation events
+    shutil.copy(join(DATASET_DIR_FULL, 'deletion_events.csv'), DATASET_DIR)
+    shutil.copy(join(DATASET_DIR_FULL, 'ban_events.csv'), DATASET_DIR)

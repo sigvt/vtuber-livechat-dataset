@@ -2,7 +2,7 @@
 
 # VTuber 500M: Live Chat and Moderation Events
 
-VTuber 500M is a huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
+VTuber 500M is a huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kind of NLP projects.
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) and join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for discussions.
 
@@ -24,7 +24,7 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 - Superchat Analysis
 - Sentence Transformer for Live Chats
 
-See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code?datasetId=1209921) for ideas.
+See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code) for ideas.
 
 We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
@@ -34,38 +34,42 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 Standard version is available at [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
-| filename              | summary               | size   |
-| --------------------- | --------------------- | ------ |
-| `channels.csv`        | Channel index         | < 1 MB |
-| `chat_stats.csv`      | Chat statistics       | < 1 MB |
-| `superchat_stats.csv` | Super Chat statistics | < 1 MB |
+| filename               | summary                          | size     |
+| ---------------------- | -------------------------------- | -------- |
+| `channels.csv`         | Channel index                    | < 1 MB   |
+| `chat_stats.csv`       | Chat statistics                  | < 1 MB   |
+| `superchat_stats.csv`  | Super Chat statistics            | < 1 MB   |
+| `chats_%Y-%m.csv`      | Live chat events (~ 500,000,000) | ~ 50 GB  |
+| `superchats_%Y-%m.csv` | Super chat events (~ 2,000,000)  | ~ 200 MB |
+| `deletion_events.csv`  | Deletion events                  | ~ 150 MB |
+| `ban_events.csv`       | Ban events                       | ~ 25 MB  |
 
 ### Full version
 
 Full version is only available to those approved by the admins. If you are interested in conducting research or analysis using the dataset, please reach us at `#livechat-dataset` channel on [holodata Discord server](https://holodata.org/discord) or at `uechiy@acm.org` (for organizations).
 
-| filename               | summary                           | size     |
-| ---------------------- | --------------------------------- | -------- |
-| `channels.csv`         | Channel index                     | < 1 MB   |
-| `chat_stats.csv`       | Chat statistics                   | < 1 MB   |
-| `superchat_stats.csv`  | Super Chat statistics             | < 1 MB   |
-| `chats_%Y-%m.csv`      | Live chat messages (500,000,000+) | ~ 90 GB  |
-| `superchats_%Y-%m.csv` | Super chat messages (1,800,000+)  | ~ 400 MB |
-| `deletion_events.csv`  | Deletion events                   | ~ 150 MB |
-| `ban_events.csv`       | Ban events                        | ~ 25 MB  |
+| filename               | summary                            | size     |
+| ---------------------- | ---------------------------------- | -------- |
+| `channels.csv`         | Channel index                      | < 1 MB   |
+| `chat_stats.csv`       | Chat statistics                    | < 1 MB   |
+| `superchat_stats.csv`  | Super Chat statistics              | < 1 MB   |
+| `chats_%Y-%m.csv`      | Live chat messages (~ 500,000,000) | ~ 90 GB  |
+| `superchats_%Y-%m.csv` | Super chat messages (~ 2,000,000)  | ~ 400 MB |
+| `deletion_events.csv`  | Deletion events                    | ~ 150 MB |
+| `ban_events.csv`       | Ban events                         | ~ 25 MB  |
 
-### [❤️‍🩹 Sensai Dataset](https://github.com/holodata/sensai-dataset)
+### [❤️‍🩹 Sensai](https://github.com/holodata/sensai-dataset)
+
+Sensai is a toxic chat dataset consists of live chats from Virtual YouTubers' live streams.
 
 | filename                  | summary                                                        | size     |
 | ------------------------- | -------------------------------------------------------------- | -------- |
 | `chats_flagged_%Y-%m.csv` | Chats flagged as either deleted or banned by mods (3,100,000+) | ~ 400 MB |
 | `chats_nonflag_%Y-%m.csv` | Non-flagged chats (3,000,000+)                                 | ~ 300 MB |
 
-To make it a balanced dataset, the number of `chats_nonflags` is adjusted (randomly sampled) to be the same as `chats_flagged`.
+## Dataset Breakdown
 
 Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
-
-## Dataset Breakdown
 
 ### Channels (`channels.csv`)
 
@@ -112,17 +116,18 @@ Inactive channels have `INACTIVE` in `group` column.
 
 ### Chats (`chats_%Y-%m.csv`)
 
-| column          | type    | description                  |
-| --------------- | ------- | ---------------------------- |
-| timestamp       | string  | UTC timestamp                |
-| body            | string  | chat message                 |
-| membership      | string  | membership status            |
-| isModerator     | boolean | is channel moderator         |
-| isVerified      | boolean | is verified account          |
-| id              | string  | anonymized chat id           |
-| authorChannelId | string  | anonymized author channel id |
-| videoId         | string  | source video id              |
-| channelId       | string  | source channel id            |
+| column          | type             | description                  | in standard version      |
+| --------------- | ---------------- | ---------------------------- | ------------------------ |
+| timestamp       | string           | ISO 8601 UTC timestamp       | seconds are omitted      |
+| id              | string           | anonymized chat id           | N/A                      |
+| authorChannelId | string           | anonymized author channel id |                          |
+| channelId       | string           | source channel id            |                          |
+| videoId         | string           | source video id              |                          |
+| body            | string           | chat message                 | N/A                      |
+| membership      | string           | membership status            | N/A                      |
+| isMember        | nullable boolean | is member (null if unknown)  | only in standard version |
+| isModerator     | boolean          | is channel moderator         | N/A                      |
+| isVerified      | boolean          | is verified account          | N/A                      |
 
 #### Membership status
 
@@ -151,18 +156,18 @@ chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
 
 ### Superchats (`chats_:year:-:month:.csv`)
 
-| column          | type            | description                  |
-| --------------- | --------------- | ---------------------------- |
-| timestamp       | string          | UTC timestamp                |
-| amount          | number          | purchased amount             |
-| currency        | string          | three-letter currency symbol |
-| color           | string          | color                        |
-| significance    | number          | significance                 |
-| body            | nullable string | chat message                 |
-| id              | string          | anonymized chat id           |
-| authorChannelId | string          | anonymized author channel id |
-| videoId         | string          | source video id              |
-| channelId       | string          | source channel id            |
+| column          | type            | description                  | in standard version |
+| --------------- | --------------- | ---------------------------- | ------------------- |
+| timestamp       | string          | ISO 8601 UTC timestamp       | seconds are omitted |
+| amount          | number          | purchased amount             |                     |
+| currency        | string          | three-letter currency symbol |                     |
+| color           | string          | color                        | N/A                 |
+| significance    | number          | significance                 |                     |
+| body            | nullable string | chat message                 | N/A                 |
+| id              | string          | anonymized chat id           | N/A                 |
+| authorChannelId | string          | anonymized author channel id |                     |
+| videoId         | string          | source video id              | N/A                 |
+| channelId       | string          | source channel id            |                     |
 
 #### Color and Significance
 
