@@ -1,8 +1,8 @@
 ![Header](https://github.com/holodata/vtuber-livechat-dataset/blob/master/.github/kaggle-dataset-header.png?raw=true)
 
-# VTuber 400M: Live Chat and Moderation Events
+# VTuber 500M: Live Chat and Moderation Events
 
-VTuber 400M is a huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
+VTuber 500M is a huge collection of hundreds of millions of live chat, super chat, and moderation events (ban and deletion) all across Virtual YouTubers' live streams, ready for academic research and any kinds of NLP projects.
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) and join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for discussions.
 
@@ -34,15 +34,11 @@ We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect 
 
 Standard version is available at [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
 
-| filename                  | summary                                                        | size     |
-| ------------------------- | -------------------------------------------------------------- | -------- |
-| `channels.csv`            | Channel index                                                  | < 1 MB   |
-| `channel_stats.csv`       | Channel statistics                                             | < 1 MB   |
-| `chats_flagged_%Y-%m.csv` | Chats flagged as either deleted or banned by mods (3,000,000+) | ~ 500 MB |
-| `chats_nonflag_%Y-%m.csv` | Non-flagged chats (3,000,000+)                                 | ~ 500 MB |
-| `superchats_%Y-%m.csv`    | Super chat messages (1,400,000+)                               | ~ 400 MB |
-
-To make it a balanced dataset, the number of `chats_nonflags` is adjusted (randomly sampled) to be the same as `chats_flagged`.
+| filename              | summary               | size   |
+| --------------------- | --------------------- | ------ |
+| `channels.csv`        | Channel index         | < 1 MB |
+| `chat_stats.csv`      | Chat statistics       | < 1 MB |
+| `superchat_stats.csv` | Super Chat statistics | < 1 MB |
 
 ### Full version
 
@@ -50,16 +46,69 @@ Full version is only available to those approved by the admins. If you are inter
 
 | filename               | summary                           | size     |
 | ---------------------- | --------------------------------- | -------- |
-| `chats_%Y-%m.csv`      | Live chat messages (480,000,000+) | ~ 80 GB  |
-| `superchats_%Y-%m.csv` | Super chat messages (1,400,000+)  | ~ 400 MB |
+| `channels.csv`         | Channel index                     | < 1 MB   |
+| `chat_stats.csv`       | Chat statistics                   | < 1 MB   |
+| `superchat_stats.csv`  | Super Chat statistics             | < 1 MB   |
+| `chats_%Y-%m.csv`      | Live chat messages (500,000,000+) | ~ 90 GB  |
+| `superchats_%Y-%m.csv` | Super chat messages (1,800,000+)  | ~ 400 MB |
 | `deletion_events.csv`  | Deletion events                   | ~ 150 MB |
 | `ban_events.csv`       | Ban events                        | ~ 25 MB  |
-| `channels.csv`         | Channel index                     | < 1 MB   |
-| `channel_stats.csv`    | Channel statistics                | < 1 MB   |
+
+### [❤️‍🩹 Sensai Dataset](https://github.com/holodata/sensai-dataset)
+
+| filename                  | summary                                                        | size     |
+| ------------------------- | -------------------------------------------------------------- | -------- |
+| `chats_flagged_%Y-%m.csv` | Chats flagged as either deleted or banned by mods (3,100,000+) | ~ 400 MB |
+| `chats_nonflag_%Y-%m.csv` | Non-flagged chats (3,000,000+)                                 | ~ 300 MB |
+
+To make it a balanced dataset, the number of `chats_nonflags` is adjusted (randomly sampled) to be the same as `chats_flagged`.
+
+Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
 ## Dataset Breakdown
 
-Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
+### Channels (`channels.csv`)
+
+| column            | type            | description            |
+| ----------------- | --------------- | ---------------------- |
+| channelId         | string          | channel id             |
+| name              | string          | channel name           |
+| englishName       | nullable string | channel name (English) |
+| affiliation       | string          | channel affiliation    |
+| group             | nullable string | group                  |
+| subscriptionCount | number          | subscription count     |
+| videoCount        | number          | uploads count          |
+| photo             | string          | channel icon           |
+
+Inactive channels have `INACTIVE` in `group` column.
+
+### Chat Statistics (`chat_stats.csv`)
+
+| column         | type   | description                                        |
+| -------------- | ------ | -------------------------------------------------- |
+| channelId      | string | channel id                                         |
+| period         | string | interested period (%Y-%M)                          |
+| chats          | number | number of chats                                    |
+| memberChats    | number | number of chats with membership status attached    |
+| uniqueChatters | number | number of unique chatters                          |
+| uniqueMembers  | number | number of unique members appeared on live chat     |
+| bannedChatters | number | number of unique chatters marked as banned by mods |
+| deletedChats   | number | number of chats deleted by mods                    |
+
+### Super Chat Statistics (`superchat_stats.csv`)
+
+| column               | type   | description                        |
+| -------------------- | ------ | ---------------------------------- |
+| channelId            | string | channel id                         |
+| period               | string | interested period (%Y-%M)          |
+| superChats           | number | number of super chats              |
+| uniqueSuperChatters  | number | number of unique super chatters    |
+| totalSC              | number | total amount of super chats (JPY)  |
+| averageSC            | number | average amount of super chat (JPY) |
+| totalMessageLength   | number | total message length               |
+| averageMessageLength | number | average mesage length              |
+| mostFrequentCurrency | string | most frequent currency             |
+| mostFrequentColor    | string | most frequent color                |
 
 ### Chats (`chats_%Y-%m.csv`)
 
@@ -71,9 +120,9 @@ Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `m
 | isModerator     | boolean | is channel moderator         |
 | isVerified      | boolean | is verified account          |
 | id              | string  | anonymized chat id           |
-| channelId       | string  | anonymized author channel id |
-| originVideoId   | string  | source video id              |
-| originChannelId | string  | source channel id            |
+| authorChannelId | string  | anonymized author channel id |
+| videoId         | string  | source video id              |
+| channelId       | string  | source channel id            |
 
 #### Membership status
 
@@ -106,14 +155,14 @@ chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
 | --------------- | --------------- | ---------------------------- |
 | timestamp       | string          | UTC timestamp                |
 | amount          | number          | purchased amount             |
-| currency        | string          | currency symbol              |
+| currency        | string          | three-letter currency symbol |
 | color           | string          | color                        |
 | significance    | number          | significance                 |
 | body            | nullable string | chat message                 |
 | id              | string          | anonymized chat id           |
-| channelId       | string          | anonymized author channel id |
-| originVideoId   | string          | source video id              |
-| originChannelId | string          | source channel id            |
+| authorChannelId | string          | anonymized author channel id |
+| videoId         | string          | source video id              |
+| channelId       | string          | source channel id            |
 
 #### Color and Significance
 
@@ -149,13 +198,13 @@ sc.sort_index(inplace=True)
 
 ### Deletion Events (`deletion_events.csv`)
 
-| column          | type    | description                  |
-| --------------- | ------- | ---------------------------- |
-| timestamp       | string  | UTC timestamp                |
-| id              | string  | anonymized chat id           |
-| retracted       | boolean | is deleted by author oneself |
-| originVideoId   | string  | source video id              |
-| originChannelId | string  | source channel id            |
+| column    | type    | description                  |
+| --------- | ------- | ---------------------------- |
+| timestamp | string  | UTC timestamp                |
+| id        | string  | anonymized chat id           |
+| retracted | boolean | is deleted by author oneself |
+| videoId   | string  | source video id              |
+| channelId | string  | source channel id            |
 
 #### Pandas usage
 
@@ -182,9 +231,9 @@ Here **Ban** means either to place user in time out or to permanently hide the u
 | column          | type   | description           |
 | --------------- | ------ | --------------------- |
 | timestamp       | string | UTC timestamp         |
-| channelId       | string | anonymized channel id |
-| originVideoId   | string | source video id       |
-| originChannelId | string | source channel id     |
+| authorChannelId | string | anonymized channel id |
+| videoId         | string | source video id       |
+| channelId       | string | source channel id     |
 
 #### Pandas usage
 
@@ -202,43 +251,11 @@ chats = pd.merge(chats, ban, on=['channelId', 'originVideoId'], how='left')
 chats['banned'].fillna(False, inplace=True)
 ```
 
-### Channels (`channels.csv`)
-
-| column            | type            | description            |
-| ----------------- | --------------- | ---------------------- |
-| channelId         | string          | channel id             |
-| name              | string          | channel name           |
-| name.en           | nullable string | channel name (English) |
-| affiliation       | string          | channel affiliation    |
-| group             | nullable string | group                  |
-| subscriptionCount | number          | subscription count     |
-| videoCount        | number          | uploads count          |
-| photo             | string          | channel icon           |
-
-Inactive channels have `INACTIVE` in `group` column.
-
-### Channel Statistics (`channel_stats.csv`)
-
-| column              | type   | description                                        |
-| ------------------- | ------ | -------------------------------------------------- |
-| channelId           | string | channel id                                         |
-| period              | string | interested period (%Y-%M)                          |
-| chats               | number | number of chats                                    |
-| memberChats         | number | number of chats with membership status attached    |
-| superChats          | number | number of super chats                              |
-| uniqueChatters      | number | number of unique chatters                          |
-| uniqueMembers       | number | number of unique members appeared on live chat     |
-| uniqueSuperChatters | number | number of unique super chatters                    |
-| totalSC             | number | total amount of super chats (JPY)                  |
-| averageSC           | number | average amount of super chat (JPY)                 |
-| bannedChatters      | number | number of unique chatters marked as banned by mods |
-| deletedChats        | number | number of chats deleted by mods                    |
-
 ## Consideration
 
 ### Anonymization
 
-`id` and `channelId` are anonymized by SHA-1 hashing algorithm with a pinch of undisclosed salt.
+`id` and `authorChannelId` are anonymized by SHA-1 hashing algorithm with a pinch of undisclosed salt.
 
 ### Handling Custom Emojis
 
@@ -253,7 +270,7 @@ Bans and deletions from multiple moderators for the same person or chat will be 
 ```latex
 @misc{vtuber-livechat-dataset,
  author={Yasuaki Uechi},
- title={VTuber 400M: Large Scale Virtual YouTubers Live Chat Dataset},
+ title={VTuber 500M: Large Scale Virtual YouTubers Live Chat Dataset},
  year={2021},
  month={3},
  version={31},

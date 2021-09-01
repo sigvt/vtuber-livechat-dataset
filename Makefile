@@ -7,13 +7,13 @@ preprocess:
 
 aggregate:
 	python3 -m vtlc.aggregate -I -R1
-	rm -f $$DATASET_ROOT/$$DATASET_NAME/superchats_2021-0{1,2}.csv
+	rm -f $$DATASET_ROOT/$$DATASET_NAME_FULL/superchats_2021-0{1,2}.csv
 
 postprocess:
-	python3 -m vtlc.postprocess -sd
+	python3 -m vtlc.postprocess
 
 upload:
 	kaggle datasets version -d -m "New version" --path $$DATASET_ROOT/$$DATASET_NAME
 
-uploadFull:
+upload-full:
 	kaggle datasets version -d -m "New version" --path $$DATASET_ROOT/$$DATASET_NAME_FULL

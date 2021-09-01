@@ -99,7 +99,7 @@ import math
 
 @lru_cache(maxsize=256)
 def convertToJPY(amount: float, currency: str) -> float:
-    return round(amount * getRateToJPY(CURRENCY_TO_TLS_MAP[currency]))
+    return round(amount * getRateToJPY(currency))
 
 
 def applyJPY(col):

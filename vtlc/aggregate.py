@@ -4,6 +4,7 @@ import hashlib
 import os
 from datetime import datetime, timezone
 from os.path import join
+from vtlc.util.currency import CURRENCY_TO_TLS_MAP
 
 import pymongo
 from dateutil.relativedelta import relativedelta
@@ -94,7 +95,7 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
 
                 if not isIncorrectSuperchat:
                     amount = doc['purchase']['amount']
-                    currency = doc['purchase']['currency']
+                    currency = CURRENCY_TO_TLS_MAP[doc['purchase']['currency']]
                     [color, significance
                     ] = convertHeaderBackgroundColorToColorAndSignificance(
                         doc['purchase']['headerBackgroundColor'])
@@ -216,7 +217,7 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
             videoId = doc['originVideoId']
             channelId = doc['originChannelId']
             amount = doc['purchaseAmount']
-            currency = doc['currency']
+            currency = CURRENCY_TO_TLS_MAP[doc['currency']]
             color = doc['color']
             significance = doc['significance']
 

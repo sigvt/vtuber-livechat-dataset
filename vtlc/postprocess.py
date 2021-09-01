@@ -4,23 +4,18 @@ from glob import iglob
 import argparse
 from os.path import basename, join, splitext
 
+import numpy as np
 import pandas as pd
 
 from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
 from vtlc.util.currency import applyJPY
-
-# chats total,nunique,mean/u
-# memberchats total,nunique,mean/u
-# superchats total,nunique,mean/u
-# ban total,nunique
-# deletion total,nunique
 
 
 def load_channels(**kwargs):
     dtype_dict = {
         'channelId': 'category',
         'name': 'category',
-        'name.en': 'category',
+        'englishName': 'category',
         'affiliation': 'category',
         'group': 'category',
         'subscriptionCount': 'int32',
@@ -78,12 +73,18 @@ def load_superchat(f):
                              'currency',
                              'authorChannelId',
                              'channelId',
+                             'color',
+                             'body',
                          ],
                          dtype=dtype_dict)
     except:
         return None
 
     sc['amountJPY'] = sc.apply(applyJPY, axis=1)
+    sc['bodyLength'] = sc['body'].str.len()
+
+    # credit: https://stackoverflow.com/a/23692920/2276646
+    mode = lambda x: x.mode()[0] if len(x) > 0 else None
 
     stat = sc.groupby('channelId', observed=True, sort=False).agg({
         'authorChannelId': [
@@ -93,7 +94,10 @@ def load_superchat(f):
         'amountJPY': [
             'sum',
             'mean',
-        ]
+        ],
+        'currency': mode,
+        'color': mode,
+        'bodyLength': ['sum', 'mean'],
     })
     stat.columns = ['_'.join(col) for col in stat.columns.values]
     stat.reset_index(inplace=True)
@@ -103,7 +107,11 @@ def load_superchat(f):
             'authorChannelId_size': 'superChats',
             'authorChannelId_nunique': 'uniqueSuperChatters',
             'amountJPY_sum': 'totalSC',
-            'amountJPY_mean': 'averageSC'
+            'amountJPY_mean': 'averageSC',
+            'bodyLength_sum': 'totalMessageLength',
+            'bodyLength_mean': 'averageMessageLength',
+            'currency_<lambda>': 'mostFrequentCurrency',
+            'color_<lambda>': 'mostFrequentColor',
         })
 
     return stat
@@ -152,8 +160,8 @@ def load_chat(f):
     return stat
 
 
-def generate_channel_stats():
-    print('[generate_channel_stats]')
+def generate_chat_stats():
+    print('[generate_chat_stats]')
     channel_stats = pd.DataFrame()
 
     for f in sorted(iglob(join(DATASET_DIR_FULL, 'chats_*.csv'))):
@@ -161,15 +169,9 @@ def generate_channel_stats():
         print('>>> Period:', period_string)
 
         chat_path = join(DATASET_DIR_FULL, 'chats_' + period_string + '.csv')
-        sc_path = join(DATASET_DIR_FULL, 'superchats_' + period_string + '.csv')
 
         # calc chat
         stat = load_chat(chat_path)
-
-        # calc sc
-        sc_stat = load_superchat(sc_path)
-        if sc_stat is not None:
-            stat = pd.merge(stat, sc_stat, on='channelId', how='left')
 
         # add period column
         stat['period'] = period_string
@@ -198,123 +200,81 @@ def generate_channel_stats():
     channel_stats[numeric_columns] = channel_stats[numeric_columns].fillna(
         0).astype('int')
 
-    # channel_stats['superChats'] = channel_stats['superChats'].astype('int')
-    # channel_stats['uniqueSuperChatters'] = channel_stats[
-    #     'uniqueSuperChatters'].astype('int')
-    # channel_stats['totalSC'] = channel_stats['totalSC'].astype('int')
-    # channel_stats['bannedChatters'] = channel_stats['bannedChatters'].astype(
-    #     'int')
-    # channel_stats['deletedChats'] = channel_stats['deletedChats'].astype('int')
-
     # re-order columns
     channel_stats = channel_stats.reindex(columns=[
         'channelId',
         'period',
         'chats',
         'memberChats',
-        'superChats',
         'uniqueChatters',
         'uniqueMembers',
-        'uniqueSuperChatters',
-        'totalSC',
-        'averageSC',
         'bannedChatters',
         'deletedChats',
     ])
 
     # save df as csv
-    print('>>> Channel Stats')
+    print('>>> Chat Statistics')
     channel_stats.info()
-    channel_stats.to_csv(join(DATASET_DIR_FULL, 'channel_stats.csv'),
-                         index=False)
+    channel_stats.to_csv(join(DATASET_DIR_FULL, 'chat_stats.csv'), index=False)
 
 
-def generate_chat_dataset(matcher):
-    print('[generate_chat_dataset]')
+def generate_superchat_stats():
+    print('[generate_superchat_stats]')
+    stats = pd.DataFrame()
 
-    delet_path = join(DATASET_DIR_FULL, 'deletion_events.csv')
-    del_events = pd.read_csv(delet_path, usecols=['id', 'retracted'])
-    del_events = del_events.query('retracted == 0').copy()
-    del_events.drop(columns=['retracted'], inplace=True)
-    del_events['deleted'] = True
-
-    ban_path = join(DATASET_DIR_FULL, 'ban_events.csv')
-    ban_events = pd.read_csv(ban_path, usecols=['authorChannelId', 'videoId'])
-    ban_events['banned'] = True
-
-    for f in sorted(iglob(join(DATASET_DIR_FULL, matcher))):
+    for f in sorted(iglob(join(DATASET_DIR_FULL, 'superchats_*.csv'))):
         period_string = splitext(basename(f))[0].split('_')[1]
         print('>>> Period:', period_string)
 
-        # load chat
-        print('>>> Loading chats')
-        chat_path = join(DATASET_DIR_FULL, 'chats_' + period_string + '.csv')
-        chat_dtype = {'authorChannelId': 'category'}
-        chats = pd.read_csv(chat_path,
-                            dtype=chat_dtype,
-                            usecols=[
-                                'id', 'authorChannelId', 'body', 'membership',
-                                'videoId', 'channelId'
-                            ])
+        sc_path = join(DATASET_DIR_FULL, 'superchats_' + period_string + '.csv')
 
-        # apply mods
-        print('>>> Merging deletion')
-        chats = pd.merge(chats, del_events, on=['id'], how='left')
-        chats['deleted'].fillna(False, inplace=True)
+        # calc sc
+        stat = load_superchat(sc_path)
 
-        # apply mods
-        print('>>> Merging bans')
-        chats = pd.merge(chats,
-                         ban_events,
-                         on=['authorChannelId', 'videoId'],
-                         how='left')
-        chats['banned'].fillna(False, inplace=True)
+        # add period column
+        stat['period'] = period_string
 
-        flagged = chats[(chats['deleted'] | chats['banned'])].copy()
+        print('>>> Info:', period_string)
+        stat.info(memory_usage='deep')
 
-        # to make balanced dataset
-        nbFlagged = flagged.shape[0]
-        print('nbFlagged', nbFlagged)
-        if nbFlagged == 0:
-            continue
+        # merge into result df
+        stats = pd.concat([stats, stat])
 
-        nonflag = chats[~(chats['deleted'] | chats['banned'])].sample(nbFlagged)
-
-        print('>>> Writing dataset')
-
-        columns_to_delete = ['deleted', 'banned', 'id', 'videoId']
-
-        flagged.drop(columns=columns_to_delete, inplace=True)
-        flagged.to_csv(join(DATASET_DIR, f'chats_flagged_{period_string}.csv'),
-                       index=False)
-        nonflag.drop(columns=columns_to_delete, inplace=True)
-        nonflag.to_csv(join(DATASET_DIR, f'chats_nonflag_{period_string}.csv'),
-                       index=False)
-
-        # free up memory
-        del nonflag
-        del flagged
-        del chats
         gc.collect()
+
+    # fillna
+    numeric_columns = stats.select_dtypes(include=['number']).columns
+    stats[numeric_columns] = stats[numeric_columns].fillna(0).astype('int')
+
+    # re-order columns
+    stats = stats.reindex(columns=[
+        'channelId',
+        'period',
+        'superChats',
+        'uniqueSuperChatters',
+        'totalSC',
+        'averageSC',
+        'totalMessageLength',
+        'averageMessageLength',
+        'mostFrequentCurrency',
+        'mostFrequentColor',
+    ])
+
+    # save df as csv
+    print('>>> Super Chat Statistics')
+    stats.info()
+    stats.to_csv(join(DATASET_DIR_FULL, 'superchat_stats.csv'), index=False)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
-    parser.add_argument('-m', '--matcher', type=str, default='chats_*.csv')
-    parser.add_argument('-s', '--stats', nargs='?', const=True, default=False)
-    parser.add_argument('-d', '--dataset', nargs='?', const=True, default=False)
     args = parser.parse_args()
 
     print('target: ' + DATASET_DIR)
     print('source: ' + DATASET_DIR_FULL)
 
-    if args.stats:
-        generate_channel_stats()
-        shutil.copy(join(DATASET_DIR_FULL, 'channel_stats.csv'), DATASET_DIR)
+    # generate_chat_stats()
+    # shutil.copy(join(DATASET_DIR_FULL, 'chat_stats.csv'), DATASET_DIR)
 
-    if args.dataset:
-        generate_chat_dataset(matcher=args.matcher)
-
-    print('>>> Copying superchats')
-    for f in iglob(join(DATASET_DIR_FULL, 'superchats_*.csv')):
-        shutil.copy(f, DATASET_DIR)
+    generate_superchat_stats()
+    shutil.copy(join(DATASET_DIR_FULL, 'superchat_stats.csv'), DATASET_DIR)

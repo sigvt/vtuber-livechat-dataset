@@ -30,7 +30,7 @@ def create_channel_index():
     writer = csv.writer(fp)
 
     writer.writerow([
-        'channelId', 'name', 'name.en', 'affiliation', 'group',
+        'channelId', 'name', 'englishName', 'affiliation', 'group',
         'subscriptionCount', 'videoCount', 'photo'
     ])
 
