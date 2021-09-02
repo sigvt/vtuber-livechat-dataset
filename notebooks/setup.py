@@ -105,7 +105,7 @@ def load_channels(**kwargs):
     dtype_dict = {
         'channelId': 'category',
         'name': 'category',
-        'name.en': 'category',
+        'englishName': 'category',
         'affiliation': 'category',
         'subscriptionCount': 'int32',
         'videoCount': 'int16',
@@ -118,7 +118,10 @@ def load_channels(**kwargs):
 
 
 def load_hololive():
-    stats = pd.read_csv(join(DATASET_DIR_FULL, 'channel_stats.csv'))
+    stats = pd.read_csv(join(DATASET_DIR_FULL, 'chat_stats.csv'))
+    sc_stats = pd.read_csv(join(DATASET_DIR_FULL, 'superchat_stats.csv'))
+    stats = pd.merge(stats, sc_stats, on=['period', 'channelId'], how='left')
+
     channels = load_channels()
 
     channels = channels[(channels['affiliation'] == 'Hololive') &
@@ -153,7 +156,7 @@ def load_hololive():
     # language
     def langmatch(channel):
         if channel['group'].startswith(
-                'English') or channel['name.en'] == 'IRyS':
+                'English') or channel['englishName'] == 'IRyS':
             return 'English'
         elif channel['group'].startswith('Indonesia'):
             return 'Indonesian'
@@ -162,7 +165,7 @@ def load_hololive():
     channels['language'] = channels.apply(langmatch, axis=1)
 
     # aggregate data
-    overall = channels.groupby('name.en').agg({
+    overall = channels.groupby('englishName').agg({
         'subscriptionCount': 'first',
         'videoCount': 'first',
         'chats': 'sum',
