@@ -8,13 +8,12 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 
 ## Provenance
 
-- **Source:** YouTube Live Chat events (all streams covered by [Holodex](https://holodex.net), including Hololive, Nijisanji, 774inc, etc)
+- **Source:** YouTube live chat events collected by our [Honeybee](https://github.com/holodata/honeybee) cluster. [Holodex](https://holodex.net) is a stream index provider for Honeybee which covers Hololive, Nijisanji, 774inc, etc.
 - **Temporal Coverage:**
   - Chats: from 2021-01-15T05:15:33Z
   - Superchats: from 2021-03-16T08:19:38Z
 - **Update Frequency:**
   - At least once per month
-- **Tool:** [Honeybee](https://github.com/holodata/honeybee)
 
 ## Research Ideas
 
@@ -26,7 +25,7 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 
 See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code) for ideas.
 
-We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
+> We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
 ## Versions
 
@@ -69,7 +68,7 @@ Sensai is a toxic chat dataset consists of live chats from Virtual YouTubers' li
 
 ## Dataset Breakdown
 
-Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
+> Ban and deletion are equivalent to `markChatItemsByAuthorAsDeletedAction` and `markChatItemAsDeletedAction` respectively.
 
 ### Channels (`channels.csv`)
 
