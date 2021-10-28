@@ -192,7 +192,9 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
                  ANONYMIZATION_SALT).encode()).hexdigest()
             authorName = doc['authorName'] if 'authorName' in doc else None
 
-            text = convertRawMessageToString(doc['message'])
+            text = convertRawMessageToString(
+                doc['message']
+            ) if 'message' in doc and doc['message'] != None else None
 
             videoId = doc['originVideoId']
             channelId = doc['originChannelId']
