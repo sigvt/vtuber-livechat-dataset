@@ -4,7 +4,7 @@ import time
 from functools import lru_cache
 import requests
 
-# convert currency to three-letter symbol
+# convert currency symbol to three-letter string
 CURRENCY_TO_TLS_MAP = {
     '$': 'USD',
     '£': 'GBP',
@@ -15,57 +15,21 @@ CURRENCY_TO_TLS_MAP = {
     '₱': 'PHP',
     '₹': 'INR',
     'A$': 'AUD',
-    'AED': 'AED',
-    'ARS': 'ARS',
-    'BAM': 'BAM',
-    'BGN': 'BGN',
-    'BOB': 'BOB',
-    'BYN': 'BYN',
     'CA$': 'CAD',
-    'CHF': 'CHF',
-    'CLP': 'CLP',
-    'COP': 'COP',
-    'CRC': 'CRC',
-    'CZK': 'CZK',
-    'DKK': 'DKK',
-    'DOP': 'DOP',
-    'EGP': 'EGP',
-    'GTQ': 'GTQ',
     'HK$': 'HKD',
-    'HNL': 'HNL',
-    'HRK': 'HRK',
-    'HUF': 'HUF',
-    'INR': 'INR',
-    'ISK': 'ISK',
-    'JOD': 'JOD',
-    'MAD': 'MAD',
-    'MKD': 'MKD',
     'MX$': 'MXN',
-    'MYR': 'MYR',
-    'NIO': 'NIO',
-    'NOK': 'NOK',
     'NT$': 'TWD',
     'NZ$': 'NZD',
-    'PEN': 'PEN',
-    'PHP': 'PHP',
-    'PLN': 'PLN',
-    'PYG': 'PYG',
-    'QAR': 'QAR',
     'R$': 'BRL',
-    'RON': 'RON',
-    'RSD': 'RSD',
-    'RUB': 'RUB',
-    'SAR': "SAR",
-    'SEK': 'SEK',
-    'SGD': 'SGD',
-    'TRY': 'TRY',
-    'UYU': 'UYU',
-    'ZAR': 'ZAR',
 }
 
 API_HOST = 'currency-exchange.p.rapidapi.com'
 API_KEY = os.environ['CURRENCY_API_KEY']
 SNAPSHOT_DIR = path.join(path.dirname(__file__), '../currency_snapshot')
+
+
+def normalizeCurrency(sym: str) -> str:
+    return CURRENCY_TO_TLS_MAP.get(sym, sym)
 
 
 def fetchRate(src: str, tgt: str) -> float:

@@ -31,7 +31,7 @@ See [public notebooks](https://www.kaggle.com/uetchy/vtuber-livechat/code) for i
 
 ### Standard version
 
-Standard version is available at [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat).
+Standard version is available at [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat). This version includes only the essential columns for general analysis in order to reduce dataset size and make it easier to use in Kaggle Kernels.
 
 | filename               | summary                          | size     |
 | ---------------------- | -------------------------------- | -------- |
@@ -45,7 +45,7 @@ Standard version is available at [Kaggle Datasets](https://www.kaggle.com/uetchy
 
 ### Full version
 
-Full version is only available to those approved by the admins. If you are interested in conducting research or analysis using the dataset, please reach us at `#livechat-dataset` channel on [holodata Discord server](https://holodata.org/discord) or at `uechiy@acm.org` (for organizations).
+Full version is only available to those approved by the admins. If you are interested in conducting research using this version, please reach us at `#livechat-dataset` channel on [holodata Discord server](https://holodata.org/discord) or at `uechiy@acm.org` (for organizations).
 
 | filename               | summary                            | size     |
 | ---------------------- | ---------------------------------- | -------- |
@@ -57,14 +57,9 @@ Full version is only available to those approved by the admins. If you are inter
 | `deletion_events.csv`  | Deletion events                    | ~ 150 MB |
 | `ban_events.csv`       | Ban events                         | ~ 25 MB  |
 
-### [❤️‍🩹 Sensai](https://github.com/holodata/sensai-dataset)
+### ❤️‍🩹 Sensai
 
-Sensai is a toxic chat dataset consists of live chats from Virtual YouTubers' live streams.
-
-| filename                  | summary                                                        | size     |
-| ------------------------- | -------------------------------------------------------------- | -------- |
-| `chats_flagged_%Y-%m.csv` | Chats flagged as either deleted or banned by mods (3,100,000+) | ~ 400 MB |
-| `chats_nonflag_%Y-%m.csv` | Non-flagged chats (3,000,000+)                                 | ~ 300 MB |
+[Sensai](https://github.com/holodata/sensai-dataset) is a live chat dataset specifically made for building ML models for spam detection / toxic chat classification.
 
 ## Dataset Breakdown
 
@@ -115,18 +110,19 @@ Inactive channels have `INACTIVE` in `group` column.
 
 ### Chats (`chats_%Y-%m.csv`)
 
-| column          | type             | description                  | in standard version      |
-| --------------- | ---------------- | ---------------------------- | ------------------------ |
-| timestamp       | string           | ISO 8601 UTC timestamp       | seconds are omitted      |
-| id              | string           | anonymized chat id           | N/A                      |
-| authorChannelId | string           | anonymized author channel id |                          |
-| channelId       | string           | source channel id            |                          |
-| videoId         | string           | source video id              |                          |
-| body            | string           | chat message                 | N/A                      |
-| membership      | string           | membership status            | N/A                      |
-| isMember        | nullable boolean | is member (null if unknown)  | only in standard version |
-| isModerator     | boolean          | is channel moderator         | N/A                      |
-| isVerified      | boolean          | is verified account          | N/A                      |
+| column          | type             | description                  | in standard version   |
+| --------------- | ---------------- | ---------------------------- | --------------------- |
+| timestamp       | string           | ISO 8601 UTC timestamp       | seconds are omitted   |
+| id              | string           | anonymized chat id           | N/A                   |
+| authorChannelId | string           | anonymized author channel id |                       |
+| channelId       | string           | source channel id            |                       |
+| videoId         | string           | source video id              |                       |
+| body            | string           | chat message                 | N/A                   |
+| bodyLength      | number           | chat message length          | standard version only |
+| membership      | string           | membership status            | N/A                   |
+| isMember        | nullable boolean | is member (null if unknown)  | standard version only |
+| isModerator     | boolean          | is channel moderator         | N/A                   |
+| isVerified      | boolean          | is verified account          | N/A                   |
 
 #### Membership status
 
@@ -248,10 +244,10 @@ chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
                     na_values='',
                     keep_default_na=False)
 ban = pd.read_csv('../input/vtuber-livechat/ban_events.csv',
-                  usecols=['channelId', 'originVideoId'])
+                  usecols=['authorChannelId', 'videoId'])
 
 ban['banned'] = True
-chats = pd.merge(chats, ban, on=['channelId', 'originVideoId'], how='left')
+chats = pd.merge(chats, ban, on=['authorChannelId', 'videoId'], how='left')
 chats['banned'].fillna(False, inplace=True)
 ```
 

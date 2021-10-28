@@ -1,16 +1,20 @@
+import gc
 import argparse
 import csv
 import hashlib
+import json
 import os
 import shutil
 from datetime import datetime, timezone
 from os.path import join
 
+import pandas as pd
 import pymongo
 from dateutil.relativedelta import relativedelta
+from tqdm import tqdm
 
 from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
-from vtlc.util.currency import CURRENCY_TO_TLS_MAP
+from vtlc.util.currency import normalizeCurrency
 from vtlc.util.message import convertRawMessageToString
 from vtlc.util.superchat import \
     convertHeaderBackgroundColorToColorAndSignificance
@@ -18,60 +22,60 @@ from vtlc.util.superchat import \
 ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
 MONGODB_URI = os.environ['MONGODB_URI']
 
+CHAT_COLUMNS = [
+    'timestamp',
+    'authorName',
+    'body',
+    'membership',
+    'isModerator',
+    'isVerified',
+    'id',
+    'authorChannelId',
+    'videoId',
+    'channelId',
+]
+
+SC_COLUMNS = [
+    'timestamp',
+    'authorName',
+    'body',
+    'amount',
+    'currency',
+    'color',
+    'significance',
+    'id',
+    'authorChannelId',
+    'videoId',
+    'channelId',
+]
+
 # epoch time
 genesisEpoch = datetime.fromtimestamp(1610687733293 / 1000, timezone.utc)
-
-# handle incorrect superchat amount case before 2021-03-15T23:19:32.123Z
-incorrectSuperchatEpoch = datetime.fromtimestamp(1615850372123 / 1000,
-                                                 timezone.utc)
 
 # handle missing columns cases before 2021-03-13T21:23:14.000Z
 missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
     1615670594000 / 1000, timezone.utc)
-# missingMembershipAndSuperchatColumnEpoch < incorrectSuperchatEpoch
 
 
-def accumulateChat(col, recent=-1, ignoreHalfway=False):
-    print('# of chats', col.estimated_document_count())
+def accumulateChat(collection, recent=-1, ignoreHalfway=False):
+    print('# of chats', collection.estimated_document_count())
 
     if recent >= 0:
         print(f'Processing chats past {recent} month(s)')
     if ignoreHalfway:
         print('While ignoring this month')
 
-    def handleCursor(cursor, filename, sc_filename):
-        chatFp = open(join(DATASET_DIR_FULL, filename), 'w', encoding='UTF8')
+    def handleCursor(cursor, total, filename):
+        CHAT_PATH = join(DATASET_DIR_FULL, filename)
+        chatFp = open(CHAT_PATH, 'w', encoding='UTF8')
         chatWriter = csv.writer(chatFp)
-        chatWriter.writerow([
-            'timestamp',
-            'body',
-            'membership',
-            'isModerator',
-            'isVerified',
-            'id',
-            'authorChannelId',
-            'videoId',
-            'channelId',
-        ])
+        chatWriter.writerow(CHAT_COLUMNS)
 
-        superchatFp = open(join(DATASET_DIR_FULL, sc_filename),
-                           'w',
-                           encoding='UTF8')
-        superchatWriter = csv.writer(superchatFp)
-        superchatWriter.writerow([
-            'timestamp',
-            'amount',
-            'currency',
-            'color',
-            'significance',
-            'body',
-            'id',
-            'authorChannelId',
-            'videoId',
-            'channelId',
-        ])
+        pbar = tqdm(total=total, mininterval=1, desc=filename)
 
         for doc in cursor:
+            pbar.update(1)
+
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
             timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
 
@@ -81,40 +85,13 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
             authorChannelId = hashlib.sha1(
                 (doc['authorChannelId'] +
                  ANONYMIZATION_SALT).encode()).hexdigest()
+            authorName = doc['authorName'] if 'authorName' in doc else None
 
             text = convertRawMessageToString(doc['message'] if 'message' in
                                              doc else doc['rawMessage'])
 
             videoId = doc['originVideoId']
             channelId = doc['originChannelId']
-
-            isSuperchat = 1 if 'purchase' in doc else 0
-
-            # handle legacy superchat
-            if isSuperchat:
-                isIncorrectSuperchat = timestamp < incorrectSuperchatEpoch
-
-                if not isIncorrectSuperchat:
-                    amount = doc['purchase']['amount']
-                    currency = CURRENCY_TO_TLS_MAP[doc['purchase']['currency']]
-                    [color, significance
-                    ] = convertHeaderBackgroundColorToColorAndSignificance(
-                        doc['purchase']['headerBackgroundColor'])
-
-                    superchatWriter.writerow([
-                        timestamp.isoformat(),
-                        amount,
-                        currency,
-                        color,
-                        significance,
-                        text,
-                        chatId,
-                        authorChannelId,
-                        videoId,
-                        channelId,
-                    ])
-
-                continue
 
             if 'membership' in doc:
                 if 'since' in doc['membership']:
@@ -137,6 +114,7 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
 
             chatWriter.writerow([
                 timestamp.isoformat(),
+                authorName,
                 text,
                 membership,
                 isModerator,
@@ -147,8 +125,13 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
                 channelId,
             ])
 
+        # bulk write
+        # chat_df = pd.DataFrame(chat_list, columns=CHAT_COLUMNS)
+        # chat_df.to_parquet(CHAT_PATH)
+        # sc_df = pd.DataFrame(sc_list, columns=SC_COLUMNS)
+        # sc_df.to_parquet(SC_PATH)
         chatFp.close()
-        superchatFp.close()
+        pbar.close()
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
@@ -164,45 +147,40 @@ def accumulateChat(col, recent=-1, ignoreHalfway=False):
         nm = cm + relativedelta(months=+1)
         nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
         filename = f'chats_{cm.strftime("%Y-%m")}.csv'
-        sc_filename = f'superchats_{cm.strftime("%Y-%m")}.csv'
         print('data range:', cm, '<= X <', nm)
-        print('target:', filename, 'and', sc_filename)
+        print('target:', filename)
 
-        cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
-        handleCursor(cursor, filename, sc_filename)
+        query = {'timestamp': {'$gte': cm, '$lt': nm}}
+        cursor = collection.find(query)
+        cursorTotal = collection.count_documents(query)
+        handleCursor(cursor, cursorTotal, filename)
+
+        gc.collect()
 
         # update start epoch
         cm = nm
 
 
-def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
-    print('# of superchats', col.estimated_document_count())
+def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
+    print('# of superchats', collection.estimated_document_count())
 
     if recent >= 0:
         print(f'Processing chats past {recent} month(s)')
     if ignoreHalfway:
         print('While ignoring this month')
 
-    def handleCursor(cursor, filename):
-        # superchatFp = open(join(DATASET_DIR_FULL, filename), 'w', encoding='UTF8')
+    def handleCursor(cursor, total, filename):
         superchatFp = open(join(DATASET_DIR_FULL, filename),
-                           'a',
+                           'w',
                            encoding='UTF8')
         superchatWriter = csv.writer(superchatFp)
-        # superchatWriter.writerow([
-        #     'timestamp',
-        #     'amount',
-        #     'currency',
-        #     'color',
-        #     'significance',
-        #     'body',
-        #     'id',
-        #     'authorChannelId',
-        #     'videoId',
-        #     'channelId',
-        # ])
+        superchatWriter.writerow(SC_COLUMNS)
+
+        pbar = tqdm(total=total, mininterval=1, desc=filename)
 
         for doc in cursor:
+            pbar.update(1)
+
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
             timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
 
@@ -212,23 +190,25 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
             authorChannelId = hashlib.sha1(
                 (doc['authorChannelId'] +
                  ANONYMIZATION_SALT).encode()).hexdigest()
+            authorName = doc['authorName'] if 'authorName' in doc else None
 
             text = convertRawMessageToString(doc['message'])
 
             videoId = doc['originVideoId']
             channelId = doc['originChannelId']
             amount = doc['purchaseAmount']
-            currency = CURRENCY_TO_TLS_MAP[doc['currency']]
+            currency = normalizeCurrency(doc['currency'])
             color = doc['color']
             significance = doc['significance']
 
             superchatWriter.writerow([
                 timestamp.isoformat(),
+                authorName,
+                text,
                 amount,
                 currency,
                 color,
                 significance,
-                text,
                 chatId,
                 authorChannelId,
                 videoId,
@@ -236,6 +216,7 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
             ])
 
         superchatFp.close()
+        pbar.close()
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
@@ -254,8 +235,10 @@ def accumulateSuperChat(col, recent=-1, ignoreHalfway=False):
         print('data range:', cm, '<= X <', nm)
         print('target:', filename)
 
-        cursor = col.find({'timestamp': {'$gte': cm, '$lt': nm}})
-        handleCursor(cursor, filename)
+        query = {'timestamp': {'$gte': cm, '$lt': nm}}
+        cursor = collection.find(query)
+        cursorTotal = collection.count_documents(query)
+        handleCursor(cursor, cursorTotal, filename)
 
         # update start epoch
         cm = nm
@@ -351,7 +334,3 @@ if __name__ == '__main__':
                         ignoreHalfway=args.ignore_halfway)
     accumulateDeletion(db.deleteactions)
     accumulateBan(db.banactions)
-
-    # copy moderation events
-    shutil.copy(join(DATASET_DIR_FULL, 'deletion_events.csv'), DATASET_DIR)
-    shutil.copy(join(DATASET_DIR_FULL, 'ban_events.csv'), DATASET_DIR)

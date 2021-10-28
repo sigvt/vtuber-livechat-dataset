@@ -11,9 +11,12 @@ aggregate:
 
 postprocess:
 	python3 -m vtlc.postprocess
+	
+archive:
+	tar --zstd -cvf $$DATASET_DIR_KAGGLE/archive.tar.zst -C $$DATASET_DIR_FULL .
 
 upload:
 	kaggle datasets version -m "New version" --path $$DATASET_DIR
 
 upload-full:
-	kaggle datasets version -m "New version" --path $$DATASET_DIR_FULL/kaggle
+	kaggle datasets version -m "New version" --path $$DATASET_DIR_KAGGLE
