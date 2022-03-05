@@ -50,7 +50,7 @@ VTuber 1B Elements is most suitable for statistical visualizations and explanato
 
 ### VTuber 1B
 
-[Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat)
+[Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) (47 GB)
 
 VTuber 1B is most suitable for frequency analysis. This edition includes only the essential columns in order to reduce dataset size and make it faster fro Kaggle Kernels to load data in.
 
@@ -91,6 +91,23 @@ VTuber 1B Complete is only available to those approved by the admins. If you are
 
 Inactive channels have `INACTIVE` in `group` column.
 
+#### Pandas usage
+
+```python
+import pandas as pd
+
+dtype_dict = {
+    'channelId': 'category',
+    'name': 'category',
+    'englishName': 'category',
+    'affiliation': 'category',
+    'subscriptionCount': 'int32',
+    'videoCount': 'int16',
+    'photo': 'category'
+}
+chats = pd.read_csv('../input/vtuber-livechat-elements/channels.csv', dtype=dtype_dict)
+```
+
 ### Chat Statistics (`chat_stats.csv`)
 
 | column         | type   | description                                        |
@@ -103,6 +120,16 @@ Inactive channels have `INACTIVE` in `group` column.
 | uniqueMembers  | number | number of unique members appeared on live chat     |
 | bannedChatters | number | number of unique chatters marked as banned by mods |
 | deletedChats   | number | number of chats deleted by mods                    |
+
+#### Pandas usage
+
+```python
+import pandas as pd
+
+chat_stats = pd.read_csv('../input/vtuber-livechat-elements/chat_stats.csv'))
+sc_stats = pd.read_csv('../input/vtuber-livechat-elements/superchat_stats.csv'))
+stats = pd.merge(chat_stats, sc_stats, on=['period', 'channelId'], how='left')
+```
 
 ### Super Chat Statistics (`superchat_stats.csv`)
 
@@ -151,14 +178,10 @@ Inactive channels have `INACTIVE` in `group` column.
 
 #### Pandas usage
 
-Set `keep_default_na` to `False` and `na_values` to `''` in `read_csv`. Otherwise, chat message like `NA` would incorrectly be treated as NaN value.
-
 ```python
-chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
-                    na_values='',
-                    keep_default_na=False,
-                    index_col='timestamp',
-                    parse_dates=True)
+import pandas as pd
+
+chats = pd.read_parquet('../input/vtuber-livechat/chats_2022-02.parquet')
 ```
 
 ### Superchats (`chats_:year:-:month:.csv`)
@@ -191,21 +214,14 @@ chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
 
 #### Pandas usage
 
-Set `keep_default_na` to `False` and `na_values` to `''` in `read_csv`. Otherwise, chat message like `NA` would incorrectly be treated as NaN value.
-
 ```python
 import pandas as pd
 from glob import iglob
 
 sc = pd.concat([
-    pd.read_csv(f,
-                na_values='',
-                keep_default_na=False,
-                index_col='timestamp',
-                parse_dates=True)
-    for f in iglob('../input/vtuber-livechat/superchats_*.csv')
-],
-               ignore_index=False)
+    pd.read_parquet(f)
+    for f in iglob('../input/vtuber-livechat/superchats_*.parquet')
+], ignore_index=False)
 sc.sort_index(inplace=True)
 ```
 
@@ -224,11 +240,8 @@ sc.sort_index(inplace=True)
 Insert `deleted_by_mod` column to `chats` DataFrame:
 
 ```python
-chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
-                    na_values='',
-                    keep_default_na=False)
-delet = pd.read_csv('../input/vtuber-livechat/deletion_events.csv',
-                    usecols=['id', 'retracted'])
+chats = pd.read_parquet('../input/vtuber-livechat/chats_2022-02.parquet')
+delet = pd.read_parquet('../input/vtuber-livechat/deletion_events.parquet', columns=['id', 'retracted'])
 
 delet = delet[delet['retracted'] == 0]
 
@@ -253,11 +266,8 @@ Here **Ban** means either to place user in time out or to permanently hide the u
 Insert `banned` column to `chats` DataFrame:
 
 ```python
-chats = pd.read_csv('../input/vtuber-livechat/chats_2021-03.csv',
-                    na_values='',
-                    keep_default_na=False)
-ban = pd.read_csv('../input/vtuber-livechat/ban_events.csv',
-                  usecols=['authorChannelId', 'videoId'])
+chats = pd.read_parquet('../input/vtuber-livechat/chats_2022-02.parquet')
+ban = pd.read_parquet('../input/vtuber-livechat/ban_events.parquet', columns=['authorChannelId', 'videoId'])
 
 ban['banned'] = True
 chats = pd.merge(chats, ban, on=['authorChannelId', 'videoId'], how='left')
