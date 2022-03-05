@@ -1,10 +1,8 @@
-import gc
 import argparse
 import csv
+import gc
 import hashlib
-import json
 import os
-import shutil
 from datetime import datetime, timezone
 from os.path import join
 
@@ -13,38 +11,36 @@ import pymongo
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
-from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
+from vtlc.constants import DATASET_DIR_FULL
 from vtlc.util.currency import normalizeCurrency
-from vtlc.util.message import convertRawMessageToString
-from vtlc.util.superchat import \
-    convertHeaderBackgroundColorToColorAndSignificance
+from vtlc.util.message import replaceEmojiWithReplacement
+# from vtlc.util.message import convertRawMessageToString
 
-ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
 MONGODB_URI = os.environ['MONGODB_URI']
 
 CHAT_COLUMNS = [
     'timestamp',
+    'id',
     'authorName',
+    'authorChannelId',
     'body',
     'membership',
     'isModerator',
     'isVerified',
-    'id',
-    'authorChannelId',
     'videoId',
     'channelId',
 ]
 
 SC_COLUMNS = [
     'timestamp',
+    'id',
     'authorName',
+    'authorChannelId',
     'body',
     'amount',
     'currency',
     'color',
     'significance',
-    'id',
-    'authorChannelId',
     'videoId',
     'channelId',
 ]
@@ -52,9 +48,16 @@ SC_COLUMNS = [
 # epoch time
 genesisEpoch = datetime.fromtimestamp(1610687733293 / 1000, timezone.utc)
 
-# handle missing columns cases before 2021-03-13T21:23:14.000Z
+# handle missing columns incident before 2021-03-13T21:23:14.000Z
 missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
     1615670594000 / 1000, timezone.utc)
+
+# handle missing membership column in chats and banneractions incident
+# between {"$date":"2022-01-20T23:47:21.029Z"} and {"$date":"2022-01-22T06:07:07.305Z"}
+missingMembershipColumn2022Start = datetime.fromtimestamp(
+    1642722441029 / 1000, timezone.utc)
+missingMembershipColumn2022End = datetime.fromtimestamp(
+    1642831627305 / 1000, timezone.utc)
 
 
 def accumulateChat(collection, recent=-1, ignoreHalfway=False):
@@ -79,48 +82,42 @@ def accumulateChat(collection, recent=-1, ignoreHalfway=False):
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
             timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
 
-            # anonymize id and author channel id with grain of salt
-            chatId = hashlib.sha1(
-                (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
-            authorChannelId = hashlib.sha1(
-                (doc['authorChannelId'] +
-                 ANONYMIZATION_SALT).encode()).hexdigest()
+            chatId = doc['id']
+            authorChannelId = doc['authorChannelId']
             authorName = doc['authorName'] if 'authorName' in doc else None
 
-            text = convertRawMessageToString(doc['message'] if 'message' in
-                                             doc else doc['rawMessage'])
+            try:
+                text = replaceEmojiWithReplacement(doc['message'])
+            except Exception as e:
+                # ignore doc missing a message
+                print(doc['_id'], 'lacks message (ignored)')
+                continue
 
             videoId = doc['originVideoId']
             channelId = doc['originChannelId']
 
-            if 'membership' in doc:
-                if 'since' in doc['membership']:
-                    membership = doc['membership']['since']
-                else:
-                    membership = 'less than 1 month'
-            else:
-                membership = 'non-member'
+            membership = doc[
+                'membership'] if 'membership' in doc else 'non-member'
 
-            isMembershipAndSuperchatInfoMissing = timestamp < missingMembershipAndSuperchatColumnEpoch
+            isMembershipAndSuperchatInfoMissing = (
+                timestamp < missingMembershipAndSuperchatColumnEpoch) or (
+                    (timestamp > missingMembershipColumn2022Start) and
+                    (timestamp < missingMembershipColumn2022End))
             if isMembershipAndSuperchatInfoMissing:
                 membership = 'unknown'
-
-            # skip chat with empty body
-            if not text:
-                continue
 
             isModerator = 1 if doc['isModerator'] else 0
             isVerified = 1 if doc['isVerified'] else 0
 
             chatWriter.writerow([
                 timestamp.isoformat(),
+                chatId,
                 authorName,
+                authorChannelId,
                 text,
                 membership,
                 isModerator,
                 isVerified,
-                chatId,
-                authorChannelId,
                 videoId,
                 channelId,
             ])
@@ -184,35 +181,30 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
             timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
 
-            # anonymize id and author channel id with grain of salt
-            chatId = hashlib.sha1(
-                (doc['id'] + ANONYMIZATION_SALT).encode()).hexdigest()
-            authorChannelId = hashlib.sha1(
-                (doc['authorChannelId'] +
-                 ANONYMIZATION_SALT).encode()).hexdigest()
+            chatId = doc['id']
+            authorChannelId = doc['authorChannelId']
             authorName = doc['authorName'] if 'authorName' in doc else None
 
-            text = convertRawMessageToString(
-                doc['message']
-            ) if 'message' in doc and doc['message'] != None else None
+            text = replaceEmojiWithReplacement(
+                doc['message']) if doc['message'] else None
 
             videoId = doc['originVideoId']
             channelId = doc['originChannelId']
             amount = doc['purchaseAmount']
-            currency = normalizeCurrency(doc['currency'])
+            currency = doc['currency']
             color = doc['color']
             significance = doc['significance']
 
             superchatWriter.writerow([
                 timestamp.isoformat(),
+                chatId,
                 authorName,
+                authorChannelId,
                 text,
                 amount,
                 currency,
                 color,
                 significance,
-                chatId,
-                authorChannelId,
                 videoId,
                 channelId,
             ])
@@ -261,9 +253,7 @@ def accumulateBan(col):
     writer.writerow(columns)
 
     for doc in cursor:
-        # anonymize author channel id with grain of salt
-        authorChannelId = hashlib.sha1(
-            (doc['channelId'] + ANONYMIZATION_SALT).encode()).hexdigest()
+        authorChannelId = doc['channelId']
         videoId = doc['originVideoId']
         channelId = doc['originChannelId']
         timestamp = doc['timestamp'].replace(
@@ -297,9 +287,7 @@ def accumulateDeletion(col):
     writer.writerow(columns)
 
     for doc in cursor:
-        # anonymize author channel id with grain of salt
-        chatId = hashlib.sha1(
-            (doc['targetId'] + ANONYMIZATION_SALT).encode()).hexdigest()
+        chatId = doc['targetId']
         videoId = doc['originVideoId']
         channelId = doc['originChannelId']
         retracted = 1 if doc['retracted'] else 0

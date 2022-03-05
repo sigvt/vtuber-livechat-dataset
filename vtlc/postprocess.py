@@ -1,4 +1,6 @@
 import gc
+import hashlib
+import os
 import shutil
 from glob import iglob
 import argparse
@@ -9,6 +11,23 @@ import pandas as pd
 
 from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
 from vtlc.util.currency import applyJPY
+
+ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
+
+# utils
+
+
+def binMember(x):
+    if x == 'unknown':
+        return None
+    return 0 if x == 'non-member' else 1
+
+
+def anonymize(s):
+    return hashlib.sha1((s + ANONYMIZATION_SALT).encode()).hexdigest()
+
+
+# func
 
 
 def load_channels(**kwargs):
@@ -96,8 +115,10 @@ def load_superchat(f):
             'sum',
             'mean',
         ],
-        'currency': mode,
-        'color': mode,
+        'currency':
+        mode,
+        'color':
+        mode,
         'bodyLength': ['sum', 'mean'],
     })
     stat.columns = ['_'.join(col) for col in stat.columns.values]
@@ -161,11 +182,11 @@ def load_chat(f):
     return stat
 
 
-def generate_chat_stats():
+def generate_chat_stats(matcher: str = '*', append_only: bool = False):
     print('[generate_chat_stats]')
     channel_stats = pd.DataFrame()
 
-    for f in sorted(iglob(join(DATASET_DIR_FULL, 'chats_*.csv'))):
+    for f in sorted(iglob(join(DATASET_DIR_FULL, f'chats_{matcher}.csv'))):
         period_string = splitext(basename(f))[0].split('_')[1]
         print('>>> Period:', period_string)
 
@@ -214,20 +235,25 @@ def generate_chat_stats():
     ])
 
     # save df as csv
-    print('>>> Chat Statistics')
+    print('>>> Writing chat statistics')
     channel_stats.info()
-    channel_stats.to_csv(join(DATASET_DIR_FULL, 'chat_stats.csv'), index=False)
+    channel_stats.to_csv(join(DATASET_DIR_FULL, 'chat_stats.csv'),
+                         index=False,
+                         header=not append_only,
+                         mode='a' if append_only else 'w')
 
 
-def generate_superchat_stats():
+def generate_superchat_stats(matcher: str = '*', append_only: bool = False):
     print('[generate_superchat_stats]')
     stats = pd.DataFrame()
 
-    for f in sorted(iglob(join(DATASET_DIR_FULL, 'superchats_*.csv'))):
+    for f in sorted(iglob(join(DATASET_DIR_FULL,
+                               f'superchats_{matcher}.csv'))):
         period_string = splitext(basename(f))[0].split('_')[1]
         print('>>> Period:', period_string)
 
-        sc_path = join(DATASET_DIR_FULL, 'superchats_' + period_string + '.csv')
+        sc_path = join(DATASET_DIR_FULL,
+                       'superchats_' + period_string + '.csv')
 
         # calc sc
         stat = load_superchat(sc_path)
@@ -262,13 +288,16 @@ def generate_superchat_stats():
     ])
 
     # save df as csv
-    print('>>> Super Chat Statistics')
+    print('>>> Writing super chat statistics')
     stats.info()
-    stats.to_csv(join(DATASET_DIR_FULL, 'superchat_stats.csv'), index=False)
+    stats.to_csv(join(DATASET_DIR_FULL, 'superchat_stats.csv'),
+                 index=False,
+                 header=not append_only,
+                 mode='a' if append_only else 'w')
 
 
-def generate_reduced_chats(matcher):
-    print('[generate_reduced_chats]')
+def generate_standard_chats(matcher: str = '*'):
+    print('[generate_standard_chats]')
     for f in sorted(iglob(join(DATASET_DIR_FULL, f'chats_{matcher}.csv'))):
         target = join(DATASET_DIR, splitext(basename(f))[0])
         print('>>> Loading:', f)
@@ -280,6 +309,7 @@ def generate_reduced_chats(matcher):
             parse_dates=['timestamp'],
             usecols=[
                 'timestamp',
+                # 'authorName',
                 'body',
                 'membership',
                 #  'isModerator',
@@ -292,36 +322,36 @@ def generate_reduced_chats(matcher):
 
         print('>>> Reducing data')
 
-        def binMember(x):
-            if x == 'unknown':
-                return None
-            return 0 if x == 'non-member' else 1
+        # anonymize author channel id with grain of salt
+        df['authorChannelId'] = df['authorChannelId'].apply(anonymize)
 
         df['isMember'] = df['membership'].apply(binMember)
         df['bodyLength'] = df['body'].str.len().fillna(0).astype('int32')
         df.drop(columns=['membership', 'body'], inplace=True)
 
         print('>>> Saving:', target)
-        df.to_csv(target + '.csv', index=False, date_format='%Y%m%dT%H%MZ')
-        # df.to_parquet(target + '.parquet', index=False)
+        # df.to_csv(target + '.csv', index=False, date_format='%Y%m%dT%H%MZ')
+        df.to_parquet(target + '.parquet', index=False)
 
         del df
         gc.collect()
 
 
-def generate_reduced_superchats(matcher):
-    print('[generate_reduced_superchats]')
-    for f in sorted(iglob(join(DATASET_DIR_FULL, f'superchats_{matcher}.csv'))):
-        target = join(DATASET_DIR, splitext(basename(f))[0])
-        print('>>> Loading:', f)
+def generate_standard_superchats(matcher: str = '*'):
+    print('[generate_standard_superchats]')
+    for source in sorted(
+            iglob(join(DATASET_DIR_FULL, f'superchats_{matcher}.csv'))):
+        target = join(DATASET_DIR, splitext(basename(source))[0])
+        print('>>> Loading:', source)
 
         df = pd.read_csv(
-            f,
+            source,
             na_values='',
             keep_default_na=False,
             parse_dates=['timestamp'],
             usecols=[
                 'timestamp',
+                # 'authorName',
                 'amount',
                 'currency',
                 #  'color',
@@ -334,34 +364,102 @@ def generate_reduced_superchats(matcher):
             ])
 
         print('>>> Reducing data')
+
+        # anonymize author channel id with grain of salt
+        df['authorChannelId'] = df['authorChannelId'].apply(anonymize)
+
         df['bodylength'] = df['body'].str.len().fillna(0).astype('int')
         df.drop(columns=['body'], inplace=True)
 
         print('>>> Saving:', target)
-        df.to_csv(target + '.csv', index=False, date_format='%Y%m%dT%H%MZ')
-        # df.to_parquet(target + '.parquet', index=False)
+        # df.to_csv(target + '.csv', index=False, date_format='%Y%m%dT%H%MZ')
+        df.to_parquet(target + '.parquet', index=False)
 
         del df
         gc.collect()
 
 
+def generate_standard_ban():
+    print('[generate_standard_ban]')
+
+    source = join(DATASET_DIR_FULL, 'ban_events.csv')
+    target = join(DATASET_DIR, 'ban_events.parquet')
+
+    print('>>> Loading:', source)
+
+    df = pd.read_csv(source,
+                     na_values='',
+                     keep_default_na=False,
+                     parse_dates=['timestamp'],
+                     usecols=[
+                         'timestamp',
+                         'authorChannelId',
+                         'videoId',
+                         'channelId',
+                     ])
+
+    print('>>> Reducing data')
+
+    # anonymize author channel id with grain of salt
+    df['authorChannelId'] = df['authorChannelId'].apply(anonymize)
+
+    print('>>> Saving:', target)
+    # df.to_csv(target, index=False)
+    df.to_parquet(target, index=False)
+
+    del df
+    gc.collect()
+
+
+def generate_standard_deletion():
+    print('[generate_standard_deletion]')
+
+    source = join(DATASET_DIR_FULL, 'deletion_events.csv')
+    target = join(DATASET_DIR, 'deletion_events.parquet')
+
+    print('>>> Loading:', source)
+
+    df = pd.read_csv(source,
+                     na_values='',
+                     keep_default_na=False,
+                     parse_dates=['timestamp'],
+                     usecols=[
+                         'timestamp',
+                         'id',
+                         'retracted',
+                         'videoId',
+                         'channelId',
+                     ])
+
+    print('>>> Reducing data')
+
+    print('>>> Saving:', target)
+    # df.to_csv(target, index=False)
+    df.to_parquet(target, index=False)
+
+    del df
+    gc.collect()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='dataset generator')
     parser.add_argument('-m', '--matcher', type=str, default='*')
+    parser.add_argument('-a', '--append-only', action='store_true')
     args = parser.parse_args()
 
     print('source: ' + DATASET_DIR_FULL)
     print('target: ' + DATASET_DIR)
+    print('matcher:', args.matcher)
+    print('appendOnly:', args.append_only)
 
-    generate_reduced_chats(matcher=args.matcher)
-    generate_reduced_superchats(matcher=args.matcher)
+    generate_standard_ban()
+    generate_standard_deletion()
+    generate_standard_superchats(matcher=args.matcher)
+    generate_standard_chats(matcher=args.matcher)
 
-    generate_chat_stats()
-    shutil.copy(join(DATASET_DIR_FULL, 'chat_stats.csv'), DATASET_DIR)
+    # generate_chat_stats(matcher=args.matcher, append_only=args.append_only)
+    # shutil.copy(join(DATASET_DIR_FULL, 'chat_stats.csv'), DATASET_DIR)
 
-    generate_superchat_stats()
-    shutil.copy(join(DATASET_DIR_FULL, 'superchat_stats.csv'), DATASET_DIR)
-
-    # copy moderation events
-    shutil.copy(join(DATASET_DIR_FULL, 'deletion_events.csv'), DATASET_DIR)
-    shutil.copy(join(DATASET_DIR_FULL, 'ban_events.csv'), DATASET_DIR)
+    # generate_superchat_stats(matcher=args.matcher,
+    #                          append_only=args.append_only)
+    # shutil.copy(join(DATASET_DIR_FULL, 'superchat_stats.csv'), DATASET_DIR)

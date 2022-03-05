@@ -124,8 +124,8 @@ def load_hololive():
 
     channels = load_channels()
 
-    channels = channels[(channels['affiliation'] == 'Hololive') &
-                        (channels['group'] != 'INACTIVE')]
+    channels = channels[(channels['affiliation'] == 'Hololive')
+                        & (channels['group'] != 'INACTIVE')]
     channels['group'].fillna('No Group', inplace=True)
 
     # exclude official/secondary/graduated channels

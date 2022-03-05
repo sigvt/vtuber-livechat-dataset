@@ -1,3 +1,6 @@
+import re
+
+
 def convertRawMessageToString(rawMessage):
 
     def handler(run):
@@ -20,3 +23,12 @@ def convertRawMessageToString(rawMessage):
             raise 'Invalid type: ' + msgType + ', ' + payload
 
     return "".join([handler(run) for run in rawMessage])
+
+
+def replaceEmojiWithReplacement(message: str):
+    p = re.compile("\ufff9.+?\ufffb")
+    """
+    Replacement character U+FFFD
+    https://en.wikipedia.org/wiki/Specials_(Unicode_block)#Replacement_character
+    """
+    return p.sub("\ufffd", message)
