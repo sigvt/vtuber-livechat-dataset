@@ -4,7 +4,7 @@ import shutil
 
 import requests
 
-from vtlc.constants import DATASET_DIR, DATASET_DIR_FULL
+from vtlc.constants import RAW_DATA_DIR, VTLC_ELEMENTS_DIR
 
 
 def get_channels(offset=0, limit=100):
@@ -26,7 +26,7 @@ def get_channels(offset=0, limit=100):
 
 
 def create_channel_index():
-    fp = open(join(DATASET_DIR_FULL, 'channels.csv'), 'w', encoding='UTF8')
+    fp = open(join(RAW_DATA_DIR, 'channels.csv'), 'w', encoding='UTF8')
     writer = csv.writer(fp)
 
     writer.writerow([
@@ -36,18 +36,20 @@ def create_channel_index():
 
     for channel in get_channels():
         writer.writerow([
-            channel['id'], channel['name'], channel['english_name'] or
-            channel['name'], channel['org'] or 'Independents', channel['group'],
-            channel['subscriber_count'] or 0, channel['video_count'] or 0,
-            channel['photo']
+            channel['id'], channel['name'], channel['english_name']
+            or channel['name'], channel['org'] or 'Independents',
+            channel['group'], channel['subscriber_count'] or 0,
+            channel['video_count'] or 0, channel['photo']
         ])
 
     fp.close()
 
 
 if __name__ == '__main__':
-    print('dataset: ' + DATASET_DIR_FULL)
+    print('source: ' + RAW_DATA_DIR)
+    print('target: ' + VTLC_ELEMENTS_DIR)
 
     create_channel_index()
 
-    shutil.copy(join(DATASET_DIR_FULL, 'channels.csv'), DATASET_DIR)
+    # RAW to ELEMENTS
+    shutil.copy(join(RAW_DATA_DIR, 'channels.csv'), VTLC_ELEMENTS_DIR)

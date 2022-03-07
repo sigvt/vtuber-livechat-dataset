@@ -8,7 +8,7 @@ from altair import Chart, X, Y, Text, Axis, TitleParams, datum
 import sys
 
 sys.path.append('..')
-from vtlc.constants import DATASET_DIR_FULL
+from vtlc.constants import VTLC_COMPLETE_DIR, VTLC_ELEMENTS_DIR
 
 
 def holodata_theme():
@@ -61,27 +61,26 @@ alt.themes.enable('holodata')
 def load_chat(month, **kwargs):
     # https://towardsdatascience.com/optimize-pandas-memory-usage-while-reading-large-datasets-1b047c762c9b
     # groupby(sort=False, observed=True)
-    dtype_dict = {
-        'isModerator': bool,
-        'isVerified': bool,
-        'membership': 'category',
-        'channelId': 'category',
-        'originChannelId': 'category',
-        'originVideoId': 'category'
-    }
-    df = pd.read_csv(join(DATASET_DIR_FULL, f'chats_{month}.csv'),
-                     na_values='',
-                     keep_default_na=False,
-                     dtype=dtype_dict,
-                     **kwargs)
+    # dtype_dict = {
+    #     'isModerator': bool,
+    #     'isVerified': bool,
+    #     'membership': 'category',
+    #     'channelId': 'category',
+    #     'originChannelId': 'category',
+    #     'originVideoId': 'category'
+    # }
+    df = pd.read_parquet(
+        join(VTLC_COMPLETE_DIR, f'chats_{month}.parquet'),
+        #  dtype=dtype_dict,
+        **kwargs)
 
     return df
 
 
 def load_sc():
     df = pd.concat([
-        pd.read_csv(f, na_values='', keep_default_na=False)
-        for f in iglob(join(DATASET_DIR_FULL, 'superchats_*.csv'))
+        pd.read_parquet(f)
+        for f in iglob(join(VTLC_COMPLETE_DIR, 'superchats_*.parquet'))
     ],
                    ignore_index=True)
 
@@ -111,15 +110,15 @@ def load_channels(**kwargs):
         'videoCount': 'int16',
         'photo': 'category'
     }
-    channels = pd.read_csv(join(DATASET_DIR_FULL, 'channels.csv'),
+    channels = pd.read_csv(join(VTLC_ELEMENTS_DIR, 'channels.csv'),
                            dtype=dtype_dict,
                            **kwargs)
     return channels
 
 
 def load_hololive():
-    stats = pd.read_csv(join(DATASET_DIR_FULL, 'chat_stats.csv'))
-    sc_stats = pd.read_csv(join(DATASET_DIR_FULL, 'superchat_stats.csv'))
+    stats = pd.read_csv(join(VTLC_ELEMENTS_DIR, 'chat_stats.csv'))
+    sc_stats = pd.read_csv(join(VTLC_ELEMENTS_DIR, 'superchat_stats.csv'))
     stats = pd.merge(stats, sc_stats, on=['period', 'channelId'], how='left')
 
     channels = load_channels()

@@ -7,16 +7,14 @@ preprocess:
 
 aggregate:
 	python3 -m vtlc.aggregate -I -R1
-	rm -f $$DATASET_DIR_FULL/superchats_2021-0{1,2}.csv
+	rm -f $$RAW_DATA_DIR/superchats_2021-0{1,2}.csv
 
 postprocess:
 	python3 -m vtlc.postprocess
-	
-archive:
-	tar --zstd -cvf $$DATASET_DIR_KAGGLE/archive.tar.zst -C $$DATASET_DIR_FULL .
 
 upload:
-	kaggle datasets version -m "New version" --path $$DATASET_DIR
+	kaggle datasets version -m "New version" --path $$VTLC_ELEMENTS_DIR
+	kaggle datasets version -m "New version" --path $$VTLC_DIR
 
-upload-full:
-	kaggle datasets version -m "New version" --path $$DATASET_DIR_KAGGLE
+upload-complete:
+	kaggle datasets version -m "New version" --path $$VTLC_COMPLETE_DIR

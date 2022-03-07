@@ -1,7 +1,7 @@
 import os
 
-DATASET_DIR_FULL = os.environ['DATASET_DIR_FULL']
-DATASET_DIR = os.environ['DATASET_DIR']
+RAW_DATA_DIR = os.environ['RAW_DATA_DIR']
 
-os.makedirs(DATASET_DIR_FULL, exist_ok=True)
-os.makedirs(DATASET_DIR, exist_ok=True)
+VTLC_DIR = os.environ['VTLC_DIR']
+VTLC_ELEMENTS_DIR = os.environ['VTLC_ELEMENTS_DIR']
+VTLC_COMPLETE_DIR = os.environ['VTLC_COMPLETE_DIR']

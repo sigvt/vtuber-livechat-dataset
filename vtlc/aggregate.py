@@ -11,7 +11,7 @@ import pymongo
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
-from vtlc.constants import DATASET_DIR_FULL
+from vtlc.constants import RAW_DATA_DIR
 from vtlc.util.currency import normalizeCurrency
 from vtlc.util.message import replaceEmojiWithReplacement
 # from vtlc.util.message import convertRawMessageToString
@@ -69,7 +69,7 @@ def accumulateChat(collection, recent=-1, ignoreHalfway=False):
         print('While ignoring this month')
 
     def handleCursor(cursor, total, filename):
-        CHAT_PATH = join(DATASET_DIR_FULL, filename)
+        CHAT_PATH = join(RAW_DATA_DIR, filename)
         chatFp = open(CHAT_PATH, 'w', encoding='UTF8')
         chatWriter = csv.writer(chatFp)
         chatWriter.writerow(CHAT_COLUMNS)
@@ -167,9 +167,7 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
         print('While ignoring this month')
 
     def handleCursor(cursor, total, filename):
-        superchatFp = open(join(DATASET_DIR_FULL, filename),
-                           'w',
-                           encoding='UTF8')
+        superchatFp = open(join(RAW_DATA_DIR, filename), 'w', encoding='UTF8')
         superchatWriter = csv.writer(superchatFp)
         superchatWriter.writerow(SC_COLUMNS)
 
@@ -241,7 +239,7 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
 def accumulateBan(col):
     print('# of ban', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(DATASET_DIR_FULL, 'ban_events.csv'), 'w', encoding='UTF8')
+    f = open(join(RAW_DATA_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -272,9 +270,7 @@ def accumulateBan(col):
 def accumulateDeletion(col):
     print('# of deletion', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(DATASET_DIR_FULL, 'deletion_events.csv'),
-             'w',
-             encoding='UTF8')
+    f = open(join(RAW_DATA_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
     writer = csv.writer(f)
 
     columns = [
@@ -311,7 +307,7 @@ if __name__ == '__main__':
     parser.add_argument('-I', '--ignore-halfway', action='store_true')
     args = parser.parse_args()
 
-    print('dataset: ' + DATASET_DIR_FULL)
+    print('dataset: ' + RAW_DATA_DIR)
 
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa

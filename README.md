@@ -2,7 +2,7 @@
 
 # VTuber 1B: Live Chat and Moderation Events
 
-**VTuber 1B** is a dataset for large-scale academic research, collecting over a billion live chats, superchats, and moderation events (bans/deletions) from virtual YouTubers' live streams.
+**VTuber 1B** is an academic purpose NLP dataset, collecting over a billion live chats, superchats, and moderation events (bans/deletions) from virtual YouTubers' live streams.
 
 Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) and join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for discussions.
 
@@ -17,7 +17,7 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
   - Super stickers: from 2022-01-20 (N/A yet)
   - Membership joining events: from 2021-10-18 (N/A yet)
   - Membership milestones: from 2021-10-20 (N/A yet)
-  - Membership gifts: TBA
+  - Membership gifts: N/A
   - Placeholders: from 2022-01-21 (N/A yet)
 - **Update Frequency:**
   - At least once every 6 months
@@ -40,7 +40,7 @@ See public notebooks built on [VTuber 1B](https://www.kaggle.com/uetchy/vtuber-l
 
 [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat-elements) (2 MB)
 
-VTuber 1B Elements is most suitable for statistical visualizations and explanatory data analysis.
+VTuber 1B Elements is most suitable for statistical visualizations and exploratory data analysis.
 
 | filename              | summary               |
 | --------------------- | --------------------- |
@@ -52,7 +52,7 @@ VTuber 1B Elements is most suitable for statistical visualizations and explanato
 
 [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) (47 GB)
 
-VTuber 1B is most suitable for frequency analysis. This edition includes only the essential columns in order to reduce dataset size and make it faster fro Kaggle Kernels to load data in.
+VTuber 1B is most suitable for frequency analysis. This edition includes only the essential columns in order to reduce dataset size and make it faster from Kaggle Kernels to load data in.
 
 | filename                   | summary                            |
 | -------------------------- | ---------------------------------- |
@@ -65,12 +65,12 @@ VTuber 1B is most suitable for frequency analysis. This edition includes only th
 
 VTuber 1B Complete is only available to those approved by the admins. If you are interested in conducting research using this edition, please reach us at `contact@holodata.org` (for organizations only).
 
-| filename               | summary                              |
-| ---------------------- | ------------------------------------ |
-| `chats_%Y-%m.csv`      | Live chat messages (> 1,000,000,000) |
-| `superchats_%Y-%m.csv` | Super chat messages (> 4,000,000)    |
-| `deletion_events.csv`  | Deletion events                      |
-| `ban_events.csv`       | Ban events                           |
+| filename                   | summary                              |
+| -------------------------- | ------------------------------------ |
+| `chats_%Y-%m.parquet`      | Live chat messages (> 1,000,000,000) |
+| `superchats_%Y-%m.parquet` | Super chat messages (> 4,000,000)    |
+| `deletion_events.parquet`  | Deletion events                      |
+| `ban_events.parquet`       | Ban events                           |
 
 ## Dataset Breakdown
 
@@ -146,7 +146,7 @@ stats = pd.merge(chat_stats, sc_stats, on=['period', 'channelId'], how='left')
 | mostFrequentCurrency | string | most frequent currency             |
 | mostFrequentColor    | string | most frequent color                |
 
-### Chats (`chats_%Y-%m.csv`)
+### Chats (`chats_%Y-%m.parquet`)
 
 | column          | type             | description                 | in standard version   |
 | --------------- | ---------------- | --------------------------- | --------------------- |
@@ -184,7 +184,7 @@ import pandas as pd
 chats = pd.read_parquet('../input/vtuber-livechat/chats_2022-02.parquet')
 ```
 
-### Superchats (`chats_:year:-:month:.csv`)
+### Superchats (`chats_:year:-:month:.parquet`)
 
 | column          | type            | description                  | in standard version |
 | --------------- | --------------- | ---------------------------- | ------------------- |
@@ -225,7 +225,7 @@ sc = pd.concat([
 sc.sort_index(inplace=True)
 ```
 
-### Deletion Events (`deletion_events.csv`)
+### Deletion Events (`deletion_events.parquet`)
 
 | column    | type    | description                  | in standard version |
 | --------- | ------- | ---------------------------- | ------------------- |
@@ -250,7 +250,7 @@ chats = pd.merge(chats, delet[['id', 'deleted_by_mod']], how='left')
 chats['deleted_by_mod'].fillna(False, inplace=True)
 ```
 
-### Ban Events (`ban_events.csv`)
+### Ban Events (`ban_events.parquet`)
 
 Here **Ban** means either to place user in time out or to permanently hide the user's comments on the channel's current and future live streams. This mixup is due to the fact that these actions are indistinguishable from others with the extracted data from `markChatItemsByAuthorAsDeletedAction` event.
 
