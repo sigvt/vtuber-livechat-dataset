@@ -87,21 +87,18 @@ def load_superchat(f):
     #     'authorChannelId': 'category',
     #     'channelId': 'category',
     # }
-    try:
-        sc = pd.read_parquet(
-            f,
-            usecols=[
-                'amount',
-                'currency',
-                'authorChannelId',
-                'channelId',
-                'color',
-                'body',
-            ],
-            #  dtype=dtype_dict
-        )
-    except:
-        return None
+    sc = pd.read_parquet(
+        f,
+        columns=[
+            'amount',
+            'currency',
+            'authorChannelId',
+            'channelId',
+            'color',
+            'body',
+        ],
+        #  dtype=dtype_dict
+    )
 
     sc['amountJPY'] = sc.apply(applyJPY, axis=1)
     sc['bodyLength'] = sc['body'].str.len()
@@ -173,7 +170,8 @@ def load_chat(f):
         })
 
     # calculate for members chats
-    mchats = chat[chat['membership'] != 'non-member']
+    mchats = chat[(chat['membership'] != 'non-member')
+                  & (chat['membership'] != 'unknown')]
     mstat = mchats.groupby('channelId', observed=True).agg(
         {'authorChannelId': ['size', 'nunique']})
     mstat.columns = ['_'.join(col) for col in mstat.columns.values]
@@ -265,6 +263,7 @@ def generate_superchat_stats(matcher: str = '*', append_only: bool = False):
 
         # calc sc
         stat = load_superchat(sc_path)
+        stat.info()
 
         # add period column
         stat['period'] = period_string
@@ -511,21 +510,21 @@ if __name__ == '__main__':
     print('appendOnly:', args.append_only)
 
     # RAW to COMPLETE
-    # compress_ban()
-    # compress_deletion()
-    # compress_superchats(matcher=args.matcher)
+    compress_ban()
+    compress_deletion()
+    compress_superchats(matcher=args.matcher)
     compress_chats(matcher=args.matcher)
 
     # COMPLETE to STANDARD
-    # generate_reduced_ban()
-    # generate_reduced_deletion()
-    # generate_reduced_superchats(matcher=args.matcher)
-    # generate_reduced_chats(matcher=args.matcher)
+    generate_reduced_ban()
+    generate_reduced_deletion()
+    generate_reduced_superchats(matcher=args.matcher)
+    generate_reduced_chats(matcher=args.matcher)
 
     # COMPLETE to ELEMENTS
-    # generate_chat_stats(matcher=args.matcher, append_only=args.append_only)
-    # shutil.copy(join(RAW_DATA_DIR, 'chat_stats.csv'), VTLC_ELEMENTS_DIR)
+    generate_superchat_stats(matcher=args.matcher,
+                             append_only=args.append_only)
+    shutil.copy(join(RAW_DATA_DIR, 'superchat_stats.csv'), VTLC_ELEMENTS_DIR)
 
-    # generate_superchat_stats(matcher=args.matcher,
-    #                          append_only=args.append_only)
-    # shutil.copy(join(RAW_DATA_DIR, 'superchat_stats.csv'), VTLC_ELEMENTS_DIR)
+    generate_chat_stats(matcher=args.matcher, append_only=args.append_only)
+    shutil.copy(join(RAW_DATA_DIR, 'chat_stats.csv'), VTLC_ELEMENTS_DIR)
