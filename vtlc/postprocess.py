@@ -315,6 +315,10 @@ def compress_chats(matcher: str = '*'):
             keep_default_na=False,
         )
 
+        print('>>> Normalizing')
+        df['isModerator'] = df['isModerator'].astype(bool)
+        df['isVerified'] = df['isVerified'].astype(bool)
+
         print('>>> Saving:', target)
         df.to_parquet(target, index=False)
 

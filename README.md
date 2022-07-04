@@ -4,7 +4,7 @@
 
 **VTuber 1B** is an academic purpose NLP dataset, collecting over a billion live chats, superchats, and moderation events (bans/deletions) from virtual YouTubers' live streams.
 
-Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) and join `#livechat-dataset` channel on [holodata Discord](https://holodata.org/discord) for discussions.
+Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber-livechat) and join `#vtuber-1b` channel on [holodata Discord](https://holodata.org/discord) for discussions.
 
 > We also offer [❤️‍🩹 Sensai](https://github.com/holodata/sensai-dataset), a live chat dataset specifically made for building ML models for spam detection / toxic chat classification.
 
@@ -30,7 +30,7 @@ Download the dataset from [Kaggle Datasets](https://www.kaggle.com/uetchy/vtuber
 - Superchat Analysis
 - Training neural language models
 
-See public notebooks built on [VTuber 1B](https://www.kaggle.com/uetchy/vtuber-livechat/code) and [VTuber 1B Elements](https://www.kaggle.com/uetchy/vtuber-livechat-elements/code) for ideas.
+See Kaggle public notebooks ([VTuber 1B](https://www.kaggle.com/uetchy/vtuber-livechat/code) / [VTuber 1B Elements](https://www.kaggle.com/uetchy/vtuber-livechat-elements/code)) for ideas, as well as [`/notebooks`](./notebooks) folder in the repo.
 
 > We employed [Honeybee](https://github.com/holodata/honeybee) cluster to collect real-time live chat events across major Vtubers' live streams. All sensitive data such as author name or author profile image are omitted from the dataset, and author channel id is anonymized by SHA-1 hashing algorithm with a grain of salt.
 
