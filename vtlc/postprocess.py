@@ -316,6 +316,7 @@ def compress_chats(matcher: str = '*'):
         )
 
         print('>>> Normalizing')
+        df['timestamp'] = df['timestamp'].astype('datetime64[us]')
         df['isModerator'] = df['isModerator'].astype(bool)
         df['isVerified'] = df['isVerified'].astype(bool)
 
@@ -337,6 +338,9 @@ def compress_superchats(matcher: str = '*'):
             na_values='',
             keep_default_na=False,
         )
+
+        print('>>> Normalizing')
+        df['timestamp'] = df['timestamp'].astype('datetime64[us]')
 
         print('>>> Saving:', target)
         df.to_parquet(target, index=False)

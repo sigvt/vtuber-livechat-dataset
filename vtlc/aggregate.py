@@ -1,35 +1,65 @@
 import argparse
-import csv
 import gc
-import hashlib
+import itertools
 import os
 from datetime import datetime, timezone
 from os.path import join
 
-import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pymongo
+from bson.codec_options import CodecOptions
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
 from vtlc.constants import RAW_DATA_DIR
-from vtlc.util.currency import normalizeCurrency
 from vtlc.util.message import replaceEmojiWithReplacement
-# from vtlc.util.message import convertRawMessageToString
+
+
+# by reclosedev
+# https://stackoverflow.com/a/8998040/2276646
+def grouper_it(n, iterable):
+    it = iter(iterable)
+    while True:
+        chunk_it = itertools.islice(it, n)
+        try:
+            first_el = next(chunk_it)
+        except StopIteration:
+            return
+        yield itertools.chain((first_el, ), chunk_it)
+
 
 MONGODB_URI = os.environ['MONGODB_URI']
 
-CHAT_COLUMNS = [
-    'timestamp',
-    'id',
-    'authorName',
-    'authorChannelId',
-    'body',
-    'membership',
-    'isModerator',
-    'isVerified',
-    'videoId',
-    'channelId',
-]
+CHUNK_SIZE = 1_000
+
+CHAT_SCHEMA = pa.schema([
+    pa.field('timestamp', pa.timestamp('ms', tz='UTC')),
+    pa.field('id', pa.string()),
+    pa.field('authorName', pa.string()),
+    pa.field('authorChannelId', pa.string()),
+    pa.field('body', pa.string()),
+    pa.field('membership', pa.string()),
+    pa.field('isModerator', pa.bool_()),
+    pa.field('isVerified', pa.bool_()),
+    pa.field('isOwner', pa.bool_()),
+    pa.field('videoId', pa.string()),
+    pa.field('channelId', pa.string()),
+])
+
+SC_SCHEMA = pa.schema([
+    pa.field('timestamp', pa.timestamp('ms', tz='UTC')),
+    pa.field('id', pa.string()),
+    pa.field('authorName', pa.string()),
+    pa.field('authorChannelId', pa.string()),
+    pa.field('body', pa.string()),
+    pa.field('amount', pa.float32()),
+    pa.field('currency', pa.string()),
+    pa.field('color', pa.string()),
+    pa.field('significance', pa.int8()),
+    pa.field('videoId', pa.string()),
+    pa.field('channelId', pa.string()),
+])
 
 SC_COLUMNS = [
     'timestamp',
@@ -49,7 +79,7 @@ SC_COLUMNS = [
 genesisEpoch = datetime.fromtimestamp(1610687733293 / 1000, timezone.utc)
 
 # handle missing columns incident before 2021-03-13T21:23:14.000Z
-missingMembershipAndSuperchatColumnEpoch = datetime.fromtimestamp(
+missingMembershipAndSuperchatColumnEnd = datetime.fromtimestamp(
     1615670594000 / 1000, timezone.utc)
 
 # handle missing membership column in chats and banneractions incident
@@ -68,67 +98,65 @@ def accumulateChat(collection, recent=-1, ignoreHalfway=False):
     if ignoreHalfway:
         print('While ignoring this month')
 
-    def handleCursor(cursor, total, filename):
-        CHAT_PATH = join(RAW_DATA_DIR, filename)
-        chatFp = open(CHAT_PATH, 'w', encoding='UTF8')
-        chatWriter = csv.writer(chatFp)
-        chatWriter.writerow(CHAT_COLUMNS)
+    def convert(doc):
+        timestamp = doc['timestamp']
 
-        pbar = tqdm(total=total, mininterval=1, desc=filename)
+        chatId = doc['id']
+        authorChannelId = doc['authorChannelId']
+        authorName = doc['authorName'] if 'authorName' in doc else None
 
-        for doc in cursor:
-            pbar.update(1)
+        try:
+            text = replaceEmojiWithReplacement(doc['message'])
+        except Exception as e:
+            # ignore doc missing a message
+            print(doc['_id'], 'lacks message (ignored)')
+            return None
 
-            # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
-            timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
+        videoId = doc['originVideoId']
+        channelId = doc['originChannelId']
 
-            chatId = doc['id']
-            authorChannelId = doc['authorChannelId']
-            authorName = doc['authorName'] if 'authorName' in doc else None
+        membership = doc['membership'] if 'membership' in doc else 'non-member'
 
-            try:
-                text = replaceEmojiWithReplacement(doc['message'])
-            except Exception as e:
-                # ignore doc missing a message
-                print(doc['_id'], 'lacks message (ignored)')
-                continue
+        isMembershipAndSuperchatInfoMissing = (
+            timestamp < missingMembershipAndSuperchatColumnEnd) or (
+                (timestamp >= missingMembershipColumn2022Start) and
+                (timestamp < missingMembershipColumn2022End))
+        if isMembershipAndSuperchatInfoMissing:
+            membership = 'unknown'
 
-            videoId = doc['originVideoId']
-            channelId = doc['originChannelId']
+        isModerator = doc['isModerator']
+        isVerified = doc['isVerified']
+        isOwner = doc['isOwner']
 
-            membership = doc[
-                'membership'] if 'membership' in doc else 'non-member'
+        return {
+            'timestamp': timestamp,
+            'id': chatId,
+            'authorName': authorName,
+            'authorChannelId': authorChannelId,
+            'body': text,
+            'membership': membership,
+            'isModerator': isModerator,
+            'isVerified': isVerified,
+            'isOwner': isOwner,
+            'videoId': videoId,
+            'channelId': channelId,
+        }
 
-            isMembershipAndSuperchatInfoMissing = (
-                timestamp < missingMembershipAndSuperchatColumnEpoch) or (
-                    (timestamp > missingMembershipColumn2022Start) and
-                    (timestamp < missingMembershipColumn2022End))
-            if isMembershipAndSuperchatInfoMissing:
-                membership = 'unknown'
+    def to_file(cursor, total, filename):
+        outpath = join(RAW_DATA_DIR, filename)
 
-            isModerator = 1 if doc['isModerator'] else 0
-            isVerified = 1 if doc['isVerified'] else 0
+        pq_writer = pq.ParquetWriter(outpath, CHAT_SCHEMA)
+        tp = tqdm(total=total, mininterval=1, desc=filename)
 
-            chatWriter.writerow([
-                timestamp.isoformat(),
-                chatId,
-                authorName,
-                authorChannelId,
-                text,
-                membership,
-                isModerator,
-                isVerified,
-                videoId,
-                channelId,
-            ])
+        for docs in grouper_it(CHUNK_SIZE, cursor):
+            tp.update(CHUNK_SIZE)
+            table = pa.Table.from_pylist(list(filter(None, map(convert,
+                                                               docs))),
+                                         schema=CHAT_SCHEMA)
+            pq_writer.write_table(table)
 
-        # bulk write
-        # chat_df = pd.DataFrame(chat_list, columns=CHAT_COLUMNS)
-        # chat_df.to_parquet(CHAT_PATH)
-        # sc_df = pd.DataFrame(sc_list, columns=SC_COLUMNS)
-        # sc_df.to_parquet(SC_PATH)
-        chatFp.close()
-        pbar.close()
+        pq_writer.close()
+        tp.close()
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
@@ -143,14 +171,14 @@ def accumulateChat(collection, recent=-1, ignoreHalfway=False):
     while cm < untilDate:
         nm = cm + relativedelta(months=+1)
         nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
-        filename = f'chats_{cm.strftime("%Y-%m")}.csv'
+        filename = f'chats_{cm.strftime("%Y-%m")}.parquet'
         print('data range:', cm, '<= X <', nm)
         print('target:', filename)
 
         query = {'timestamp': {'$gte': cm, '$lt': nm}}
         cursor = collection.find(query)
         cursorTotal = collection.count_documents(query)
-        handleCursor(cursor, cursorTotal, filename)
+        to_file(cursor, cursorTotal, filename)
 
         gc.collect()
 
@@ -166,49 +194,51 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
     if ignoreHalfway:
         print('While ignoring this month')
 
-    def handleCursor(cursor, total, filename):
-        superchatFp = open(join(RAW_DATA_DIR, filename), 'w', encoding='UTF8')
-        superchatWriter = csv.writer(superchatFp)
-        superchatWriter.writerow(SC_COLUMNS)
+    def convert(doc):
+        timestamp = doc['timestamp']
 
-        pbar = tqdm(total=total, mininterval=1, desc=filename)
+        chatId = doc['id']
+        authorChannelId = doc['authorChannelId']
+        authorName = doc['authorName'] if 'authorName' in doc else None
 
-        for doc in cursor:
-            pbar.update(1)
+        text = replaceEmojiWithReplacement(
+            doc['message']) if doc['message'] else None
 
-            # https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
-            timestamp = doc['timestamp'].replace(tzinfo=timezone.utc)
+        videoId = doc['originVideoId']
+        channelId = doc['originChannelId']
+        amount = doc['purchaseAmount']
+        currency = doc['currency']
+        color = doc['color']
+        significance = doc['significance']
 
-            chatId = doc['id']
-            authorChannelId = doc['authorChannelId']
-            authorName = doc['authorName'] if 'authorName' in doc else None
+        return {
+            'timestamp': timestamp,
+            'id': chatId,
+            'authorName': authorName,
+            'authorChannelId': authorChannelId,
+            'body': text,
+            'amount': amount,
+            'currency': currency,
+            'color': color,
+            'significance': significance,
+            'videoId': videoId,
+            'channelId': channelId,
+        }
 
-            text = replaceEmojiWithReplacement(
-                doc['message']) if doc['message'] else None
+    def to_file(cursor, total, filename):
+        outpath = join(RAW_DATA_DIR, filename)
 
-            videoId = doc['originVideoId']
-            channelId = doc['originChannelId']
-            amount = doc['purchaseAmount']
-            currency = doc['currency']
-            color = doc['color']
-            significance = doc['significance']
+        pq_writer = pq.ParquetWriter(outpath, SC_SCHEMA)
+        tp = tqdm(total=total, mininterval=1, desc=filename)
 
-            superchatWriter.writerow([
-                timestamp.isoformat(),
-                chatId,
-                authorName,
-                authorChannelId,
-                text,
-                amount,
-                currency,
-                color,
-                significance,
-                videoId,
-                channelId,
-            ])
+        for docs in grouper_it(CHUNK_SIZE, cursor):
+            tp.update(CHUNK_SIZE)
+            table = pa.Table.from_pylist(list(map(convert, docs)),
+                                         schema=SC_SCHEMA)
+            pq_writer.write_table(table)
 
-        superchatFp.close()
-        pbar.close()
+        pq_writer.close()
+        tp.close()
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
@@ -223,14 +253,14 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
     while cm < untilDate:
         nm = cm + relativedelta(months=+1)
         nm = datetime(nm.year, nm.month, 1, tzinfo=timezone.utc)
-        filename = f'superchats_{cm.strftime("%Y-%m")}.csv'
+        filename = f'superchats_{cm.strftime("%Y-%m")}.parquet'
         print('data range:', cm, '<= X <', nm)
-        print('target:', filename)
+        print('target:', join(RAW_DATA_DIR, filename))
 
         query = {'timestamp': {'$gte': cm, '$lt': nm}}
         cursor = collection.find(query)
         cursorTotal = collection.count_documents(query)
-        handleCursor(cursor, cursorTotal, filename)
+        to_file(cursor, cursorTotal, filename)
 
         # update start epoch
         cm = nm
@@ -239,66 +269,47 @@ def accumulateSuperChat(collection, recent=-1, ignoreHalfway=False):
 def accumulateBan(col):
     print('# of ban', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(RAW_DATA_DIR, 'ban_events.csv'), 'w', encoding='UTF8')
-    writer = csv.writer(f)
 
-    columns = [
-        'timestamp',
-        'authorChannelId',
-        'videoId',
-        'channelId',
-    ]
-    writer.writerow(columns)
-
-    for doc in cursor:
+    def convert(doc):
         authorChannelId = doc['channelId']
         videoId = doc['originVideoId']
         channelId = doc['originChannelId']
-        timestamp = doc['timestamp'].replace(
-            tzinfo=timezone.utc).isoformat() if 'timestamp' in doc else None
+        timestamp = doc['timestamp'] if 'timestamp' in doc else None
 
-        writer.writerow([
-            timestamp,
-            authorChannelId,
-            videoId,
-            channelId,
-        ])
+        return {
+            'timestamp': timestamp,
+            'authorChannelId': authorChannelId,
+            'videoId': videoId,
+            'channelId': channelId,
+        }
 
-    f.close()
+    records = list(map(convert, cursor))
+    table = pa.Table.from_pylist(records)
+    pq.write_table(table, join(RAW_DATA_DIR, 'ban_events.parquet'))
 
 
 def accumulateDeletion(col):
     print('# of deletion', col.estimated_document_count())
     cursor = col.find()
-    f = open(join(RAW_DATA_DIR, 'deletion_events.csv'), 'w', encoding='UTF8')
-    writer = csv.writer(f)
 
-    columns = [
-        'timestamp',
-        'id',
-        'retracted',
-        'videoId',
-        'channelId',
-    ]
-    writer.writerow(columns)
-
-    for doc in cursor:
+    def convert(doc):
         chatId = doc['targetId']
         videoId = doc['originVideoId']
         channelId = doc['originChannelId']
-        retracted = 1 if doc['retracted'] else 0
-        timestamp = doc['timestamp'].replace(
-            tzinfo=timezone.utc).isoformat() if 'timestamp' in doc else None
+        retracted = doc['retracted']
+        timestamp = doc['timestamp'] if 'timestamp' in doc else None
 
-        writer.writerow([
-            timestamp,
-            chatId,
-            retracted,
-            videoId,
-            channelId,
-        ])
+        return {
+            'timestamp': timestamp,
+            'id': chatId,
+            'retracted': retracted,
+            'videoId': videoId,
+            'channelId': channelId,
+        }
 
-    f.close()
+    records = list(map(convert, cursor))
+    table = pa.Table.from_pylist(records)
+    pq.write_table(table, join(RAW_DATA_DIR, 'deletion_events.parquet'))
 
 
 if __name__ == '__main__':
@@ -312,11 +323,18 @@ if __name__ == '__main__':
     client = pymongo.MongoClient(MONGODB_URI)
     db = client.vespa
 
-    accumulateChat(db.chats,
+    options = CodecOptions(tz_aware=True)
+
+    chats = db.get_collection('chats', codec_options=options)
+    sc = db.get_collection('superchats', codec_options=options)
+    delete_actions = db.get_collection('deleteactions', codec_options=options)
+    ban_actions = db.get_collection('banactions', codec_options=options)
+
+    accumulateChat(chats,
                    recent=args.recent,
                    ignoreHalfway=args.ignore_halfway)
-    accumulateSuperChat(db.superchats,
+    accumulateSuperChat(sc,
                         recent=args.recent,
                         ignoreHalfway=args.ignore_halfway)
-    accumulateDeletion(db.deleteactions)
-    accumulateBan(db.banactions)
+    accumulateDeletion(delete_actions)
+    accumulateBan(ban_actions)
