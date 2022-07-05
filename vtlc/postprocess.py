@@ -1,15 +1,15 @@
+import argparse
 import gc
 import hashlib
 import os
 import shutil
 from glob import iglob
-import argparse
 from os.path import basename, join, splitext
 
-import numpy as np
 import pandas as pd
 
-from vtlc.constants import RAW_DATA_DIR, VTLC_DIR, VTLC_ELEMENTS_DIR, VTLC_COMPLETE_DIR
+from vtlc.constants import (RAW_DATA_DIR, VTLC_COMPLETE_DIR, VTLC_DIR,
+                            VTLC_ELEMENTS_DIR)
 from vtlc.util.currency import applyJPY
 
 ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
@@ -20,7 +20,7 @@ ANONYMIZATION_SALT = os.environ['ANONYMIZATION_SALT']
 def binMember(x):
     if x == 'unknown':
         return None
-    return 0 if x == 'non-member' else 1
+    return False if x == 'non-member' else True
 
 
 def anonymize(s):
@@ -48,22 +48,21 @@ def load_channels(**kwargs):
 
 
 def load_moderation_events():
-    delet_path = join(RAW_DATA_DIR, 'deletion_events.csv')
+    delet_path = join(RAW_DATA_DIR, 'deletion_events.parquet')
 
     print('>>> Calculating:', delet_path)
-    delet = pd.read_csv(join(RAW_DATA_DIR, 'deletion_events.csv'),
-                        index_col='timestamp',
-                        parse_dates=True)
+    delet = pd.read_parquet(delet_path)
+    delet.set_index('timestamp', inplace=True)
     delet['period'] = delet.index.strftime('%Y-%m')
     delet = delet.query('retracted == 0')
     delet = delet.groupby(
         ['channelId', 'period'],
         observed=True)['id'].nunique().rename('deletedChats').reset_index()
-    # delet.info()
 
-    ban_path = join(RAW_DATA_DIR, 'ban_events.csv')
+    ban_path = join(RAW_DATA_DIR, 'ban_events.parquet')
     print('>>> Calculating:', ban_path)
-    ban = pd.read_csv(ban_path, index_col='timestamp', parse_dates=True)
+    ban = pd.read_parquet(ban_path)
+    ban.set_index('timestamp', inplace=True)
     ban['period'] = ban.index.strftime('%Y-%m')
     ban = ban.groupby([
         'channelId',
@@ -73,7 +72,6 @@ def load_moderation_events():
     ban.reset_index(inplace=True)
     ban.rename(columns={'authorChannelId_nunique': 'bannedChatters'},
                inplace=True)
-    # ban.info()
 
     return [ban, delet]
 
@@ -143,11 +141,6 @@ def load_superchat(f):
 def load_chat(f):
     print('>>> Calculating:', f)
     # load chats
-    # dtype_dict = {
-    #     'authorChannelId': 'category',
-    #     'channelId': 'category',
-    #     'membership': 'category',
-    # }
     chat = pd.read_parquet(
         f,
         columns=[
@@ -155,7 +148,6 @@ def load_chat(f):
             'channelId',
             'membership',
         ],
-        #    dtype=dtype_dict
     )
 
     # calculate total, unique
@@ -303,92 +295,87 @@ def generate_superchat_stats(matcher: str = '*', append_only: bool = False):
                  mode='a' if append_only else 'w')
 
 
-def compress_chats(matcher: str = '*'):
-    print('[compress_chats]')
-    for f in sorted(iglob(join(RAW_DATA_DIR, f'chats_{matcher}.csv'))):
-        target = join(VTLC_COMPLETE_DIR, splitext(basename(f))[0] + '.parquet')
-        print('>>> Loading:', f)
+def normalize_chats(matcher: str = '*'):
+    print('[normalize_chats]')
+    for src in sorted(iglob(join(RAW_DATA_DIR, f'chats_{matcher}.parquet'))):
+        tgt = join(VTLC_COMPLETE_DIR, splitext(basename(src))[0] + '.parquet')
+        shutil.copy(src, tgt)
 
-        df = pd.read_csv(
-            f,
-            na_values='',
-            keep_default_na=False,
-        )
+        # print('>>> Loading:', src)
 
-        print('>>> Normalizing')
-        df['timestamp'] = df['timestamp'].astype('datetime64[us]')
-        df['isModerator'] = df['isModerator'].astype(bool)
-        df['isVerified'] = df['isVerified'].astype(bool)
+        # df = pd.read_parquet(src)
 
-        print('>>> Saving:', target)
-        df.to_parquet(target, index=False)
+        # print('>>> Normalizing')
 
-        del df
-        gc.collect()
+        # print('>>> Saving:', target)
+        # df.to_parquet(target, index=False)
+
+        # del df
+        # gc.collect()
 
 
-def compress_superchats(matcher: str = '*'):
-    print('[compress_superchats]')
-    for f in sorted(iglob(join(RAW_DATA_DIR, f'superchats_{matcher}.csv'))):
-        target = join(VTLC_COMPLETE_DIR, splitext(basename(f))[0] + '.parquet')
-        print('>>> Loading:', f)
+def normalize_superchats(matcher: str = '*'):
+    print('[normalize_superchats]')
+    for src in sorted(
+            iglob(join(RAW_DATA_DIR, f'superchats_{matcher}.parquet'))):
+        tgt = join(VTLC_COMPLETE_DIR, splitext(basename(src))[0] + '.parquet')
+        shutil.copy(src, tgt)
+        # print('>>> Loading:', src)
 
-        df = pd.read_csv(
-            f,
-            na_values='',
-            keep_default_na=False,
-        )
+        # df = pd.read_parquet(src)
 
-        print('>>> Normalizing')
-        df['timestamp'] = df['timestamp'].astype('datetime64[us]')
+        # print('>>> Normalizing')
 
-        print('>>> Saving:', target)
-        df.to_parquet(target, index=False)
+        # print('>>> Saving:', tgt)
+        # df.to_parquet(tgt, index=False)
 
-        del df
-        gc.collect()
+        # del df
+        # gc.collect()
 
 
-def compress_ban():
-    print('[compress_ban]')
-    source = join(RAW_DATA_DIR, 'ban_events.csv')
+def normalize_ban():
+    print('[normalize_ban]')
+    source = join(RAW_DATA_DIR, 'ban_events.parquet')
     target = join(VTLC_COMPLETE_DIR, 'ban_events.parquet')
-    print('>>> Loading:', source)
-    df = pd.read_csv(source, na_values='', keep_default_na=False)
-    print('>>> Saving:', target)
-    df.to_parquet(target, index=False)
-    del df
-    gc.collect()
+    shutil.copy(source, target)
+    # print('>>> Loading:', source)
+    # df = pd.read_parquet(source)
+    # print('>>> Saving:', target)
+    # df.to_parquet(target, index=False)
+    # del df
+    # gc.collect()
 
 
-def compress_deletion():
-    print('[compress_deletion]')
-    source = join(RAW_DATA_DIR, 'deletion_events.csv')
+def normalize_deletion():
+    print('[normalize_deletion]')
+    source = join(RAW_DATA_DIR, 'deletion_events.parquet')
     target = join(VTLC_COMPLETE_DIR, 'deletion_events.parquet')
-    print('>>> Loading:', source)
-    df = pd.read_csv(source, na_values='', keep_default_na=False)
-    print('>>> Saving:', target)
-    df.to_parquet(target, index=False)
-    del df
-    gc.collect()
+    shutil.copy(source, target)
+    # print('>>> Loading:', source)
+    # df = pd.read_parquet(source)
+    # print('>>> Saving:', target)
+    # df.to_parquet(target, index=False)
+    # del df
+    # gc.collect()
 
 
 def generate_reduced_chats(matcher: str = '*'):
     print('[generate_reduced_chats]')
-    for f in sorted(iglob(join(VTLC_COMPLETE_DIR,
-                               f'chats_{matcher}.parquet'))):
-        target = join(VTLC_DIR, splitext(basename(f))[0] + '.parquet')
-        print('>>> Loading:', f)
+    for src in sorted(
+            iglob(join(VTLC_COMPLETE_DIR, f'chats_{matcher}.parquet'))):
+        tgt = join(VTLC_DIR, splitext(basename(src))[0] + '.parquet')
+        print('>>> Loading:', src)
 
         df = pd.read_parquet(
-            f,
+            src,
             columns=[
                 'timestamp',
                 # 'authorName',
                 'body',
                 'membership',
-                #  'isModerator',
-                #  'isVerified',
+                # 'isModerator',
+                # 'isVerified',
+                # 'isOwner',
                 # 'id',
                 'authorChannelId',
                 'videoId',
@@ -397,15 +384,19 @@ def generate_reduced_chats(matcher: str = '*'):
 
         print('>>> Reducing data')
 
-        # anonymize author channel id with grain of salt
+        # Anonymization
         df['authorChannelId'] = df['authorChannelId'].apply(anonymize)
 
+        # Convert membership
         df['isMember'] = df['membership'].apply(binMember)
-        df['bodyLength'] = df['body'].str.len().fillna(0).astype('int32')
-        df.drop(columns=['membership', 'body'], inplace=True)
+        df.drop(columns=['membership'], inplace=True)
 
-        print('>>> Saving:', target)
-        df.to_parquet(target, index=False)
+        # Drop body
+        df['bodyLength'] = df['body'].str.len().fillna(0).astype('int32')
+        df.drop(columns=['body'], inplace=True)
+
+        print('>>> Saving:', tgt)
+        df.to_parquet(tgt, index=False)
 
         del df
         gc.collect()
@@ -436,9 +427,10 @@ def generate_reduced_superchats(matcher: str = '*'):
 
         print('>>> Reducing data')
 
-        # anonymize author channel id with grain of salt
+        # Anonymization
         df['authorChannelId'] = df['authorChannelId'].apply(anonymize)
 
+        # Drop boxy
         df['bodylength'] = df['body'].str.len().fillna(0).astype('int')
         df.drop(columns=['body'], inplace=True)
 
@@ -467,11 +459,10 @@ def generate_reduced_ban():
 
     print('>>> Reducing data')
 
-    # anonymize author channel id with grain of salt
+    # Anonymization
     df['authorChannelId'] = df['authorChannelId'].apply(anonymize)
 
     print('>>> Saving:', target)
-    # df.to_csv(target, index=False)
     df.to_parquet(target, index=False)
 
     del df
@@ -495,8 +486,6 @@ def generate_reduced_deletion():
                              'channelId',
                          ])
 
-    # print('>>> Reducing data')
-
     print('>>> Saving:', target)
     df.to_parquet(target, index=False)
 
@@ -517,19 +506,19 @@ if __name__ == '__main__':
     print('matcher:', args.matcher)
     print('appendOnly:', args.append_only)
 
-    # RAW to COMPLETE
-    compress_ban()
-    compress_deletion()
-    compress_superchats(matcher=args.matcher)
-    compress_chats(matcher=args.matcher)
+    # Private datasets
+    normalize_ban()
+    normalize_deletion()
+    normalize_superchats(matcher=args.matcher)
+    normalize_chats(matcher=args.matcher)
 
-    # COMPLETE to STANDARD
+    # Public datasets
     generate_reduced_ban()
     generate_reduced_deletion()
     generate_reduced_superchats(matcher=args.matcher)
     generate_reduced_chats(matcher=args.matcher)
 
-    # COMPLETE to ELEMENTS
+    # Stats
     generate_superchat_stats(matcher=args.matcher,
                              append_only=args.append_only)
     shutil.copy(join(RAW_DATA_DIR, 'superchat_stats.csv'), VTLC_ELEMENTS_DIR)
