@@ -16,7 +16,7 @@ def get_channels(offset=0, limit=100):
         'sort': 'suborg',
         'order': 'asc'
     }
-    res = requests.get('https://holodex.net/api/v2/channels', params=payload)
+    res = requests.get('https://holodex.net/api/v2/channels', params=payload, timeout=30)
     data = res.json()
 
     if len(data) == 0:
